@@ -1,0 +1,137 @@
+name: Scenario Evaluation Pipeline
+
+on:
+  push:
+    paths:
+      - "scenario/**"
+      - "evaluation/**"
+      - ".foundry/**"
+  pull_request:
+    paths:
+      - "scenario/**"
+      - "evaluation/**"
+      - ".foundry/**"
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Deterministic ScenarioEngine unit eval (no LLM)
+  # ─────────────────────────────────────────────────────────────
+  unit-eval:
+    name: "Layer 1: ScenarioEngine Unit Eval"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run existing engine tests
+        run: pytest tests/test_engine.py -v --tb=short
+
+      - name: Run scenario evaluation tests
+        run: pytest evaluation/test_scenario_eval.py -v --tb=short -s
+
+      - name: Generate seed dataset
+        run: python evaluation/dataset_generator.py
+
+      - name: Upload seed dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-seed-dataset
+          path: .foundry/datasets/*.jsonl
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Foundry Batch Eval (requires Azure credentials)
+  # ─────────────────────────────────────────────────────────────
+  foundry-eval:
+    name: "Layer 3: Foundry Batch Eval"
+    runs-on: ubuntu-latest
+    needs: unit-eval
+    if: github.event_name == 'pull_request'
+
+    environment: azure-eval
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download seed dataset
+        uses: actions/download-artifact@v4
+        with:
+          name: eval-seed-dataset
+          path: .foundry/datasets/
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run P0 batch evaluations
+        env:
+          AZURE_AI_PROJECT_ENDPOINT: ${{ secrets.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_EVALUATION_MODEL_DEPLOYMENT: "gpt-5.2"
+        run: |
+          python evaluation/run_batch_eval.py \
+            --priority P0 \
+            --output .foundry/results/batch-eval-ci.json
+
+      - name: Upload eval results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: .foundry/results/*.json
+          retention-days: 90
+
+      - name: Post eval summary to PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultPath = '.foundry/results/batch-eval-ci.json';
+
+            let body = '## 📊 Scenario Evaluation Results\n\n';
+
+            if (fs.existsSync(resultPath)) {
+              const results = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+
+              body += '| Test Case | Status | Details |\n';
+              body += '|-----------|--------|----------|\n';
+
+              for (const r of results) {
+                const status = r.status === 'completed' ? '✅' : '❌';
+                const details = r.error || (r.evaluators || []).join(', ');
+                body += `| ${r.test_case_id} | ${status} ${r.status} | ${details} |\n`;
+              }
+            } else {
+              body += '⚠️ No evaluation results found.\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

@@ -1,0 +1,54 @@
+# Slot Elicitation Quality Evaluator
+# 評価対象: スロット収集時の自然さ
+# カテゴリ: agents
+
+name: slot_elicitation_quality
+display_name: "Slot Elicitation Quality"
+description: |
+  Evaluates how naturally and effectively the agent elicits required
+  slot values from the user. Checks for conversational naturalness,
+  appropriate prompting, and graceful handling of missing/invalid values.
+
+version: "1.0"
+category: agents
+
+annotation:
+  type: llm_judge
+  model_deployment: gpt-5.2
+
+scoring:
+  scale: 1-5
+  criteria:
+    5: "スロット収集が極めて自然。ユーザーに負担を感じさせず、会話の流れの中で情報を取得。"
+    4: "スロット収集は自然だが、若干のフォーム感がある。ユーザー体験に大きな影響なし。"
+    3: "機能的にはスロット収集できているが、質問が機械的で自然さに欠ける。"
+    2: "スロット収集の仕方が不自然。複数のスロットを同時に聞く、不適切な順序等。"
+    1: "スロット収集に失敗。必要な情報を聞かない、または全く不自然な方法で聞く。"
+
+prompt_template: |
+  あなたは音声エージェントのスロット収集品質評価者です。
+  エージェントがユーザーから必要な情報（スロット）をどの程度自然に収集しているかを評価してください。
+
+  ## 評価対象
+  - ユーザー入力: {{query}}
+  - エージェント応答: {{response}}
+  - コンテキスト（必要スロット・収集状態）: {{context}}
+  - 期待される行動: {{expected_behavior}}
+
+  ## 評価ポイント
+  1. 質問の自然さ（フォーム的でないか）
+  2. 収集順序の適切さ
+  3. 不正な値への対応の親切さ
+  4. ユーザーが一度に複数のスロット情報を提供した場合の処理
+
+  ## 出力形式
+  score: <1-5>
+  reasoning: <評価理由>
+
+column_mapping:
+  query: "${data.query}"
+  response: "${data.response}"
+  expected_behavior: "${data.expected_behavior}"
+  context: "${data.context}"
+
+threshold: 4.0

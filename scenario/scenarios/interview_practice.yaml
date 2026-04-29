@@ -1,0 +1,325 @@
+##############################################################################
+# 面接練習シナリオ定義 (Interview Practice Scenario)
+#
+# State Machine で制御される面接練習ボイスエージェントのシナリオ定義。
+# ScenarioEngine がこの YAML をロードし、状態遷移・スロット収集・
+# 安全ルール評価を行う。
+##############################################################################
+
+name: interview_practice
+initial_state: greeting
+
+global_instructions: |
+  あなたは面接練習をサポートするAIアシスタントです。
+  ユーザーの発言を分析し、classify_and_act 関数を必ず呼び出してください。
+  応答は自然な日本語の口語体で、1〜2文ずつ短く話してください。
+  漢字の読みが曖昧な固有名詞はカタカナで出力してください。
+  classify_and_act 関数の結果に含まれる response_instructions に従って応答を生成してください。
+  response_instructions の内容をそのまま読み上げるのではなく、指示に基づいて自然な応答を生成してください。
+  英語で話しかけられた場合は英語で応答してください。
+
+# ============================================================================
+# スロット定義
+# ============================================================================
+slots:
+  interview_type:
+    type: enum
+    required: true
+    values: [behavioral, technical, case]
+    description: "面接の種類（行動面接・技術面接・ケース面接）"
+
+  target_role:
+    type: str
+    required: true
+    description: "志望する職種・ポジション"
+
+  experience_level:
+    type: enum
+    required: true
+    values: [junior, mid, senior]
+    description: "経験レベル（ジュニア・ミドル・シニア）"
+
+  question_count:
+    type: int
+    required: false
+    default: "0"
+    description: "出題済み質問数（内部カウンター）"
+
+# ============================================================================
+# インテント定義
+# ============================================================================
+intents:
+  start_practice:
+    description: "面接練習を開始したい"
+    example_utterances:
+      - "面接の練習がしたい"
+      - "面接練習を始めよう"
+      - "練習をお願いします"
+
+  provide_info:
+    description: "スロット情報を提供する（面接種別・職種・経験レベル）"
+    example_utterances:
+      - "技術面接をお願いします"
+      - "ソフトウェアエンジニアです"
+      - "ミドルレベルです"
+      - "行動面接で、プロジェクトマネージャー、シニアです"
+
+  confirm:
+    description: "設定内容を確認・承認する"
+    example_utterances:
+      - "はい、それで始めてください"
+      - "OKです"
+      - "問題ありません"
+
+  change:
+    description: "設定内容を変更したい"
+    example_utterances:
+      - "やっぱり技術面接に変えたい"
+      - "ポジションを変えてください"
+
+  answer:
+    description: "面接の質問に回答する"
+    example_utterances:
+      - "前職ではチームリーダーとして..."
+      - "その問題に対してはまず..."
+
+  skip:
+    description: "質問をスキップしたい"
+    example_utterances:
+      - "この質問はスキップしてください"
+      - "次の質問をお願いします"
+
+  next_question:
+    description: "フィードバック後に次の質問へ進みたい"
+    example_utterances:
+      - "次の質問をお願いします"
+      - "続けてください"
+
+  end_interview:
+    description: "面接練習を終了したい"
+    example_utterances:
+      - "もう終わりにしたい"
+      - "ここまでにしましょう"
+      - "十分です"
+
+  restart:
+    description: "もう一度最初からやり直したい"
+    example_utterances:
+      - "もう一回やりたい"
+      - "最初からやり直したい"
+
+  ask_help:
+    description: "ヘルプ・質問・使い方を聞きたい"
+    example_utterances:
+      - "どう使えばいいですか"
+      - "ヘルプ"
+      - "何ができますか"
+
+  off_topic:
+    description: "シナリオに関係ない発言"
+    example_utterances:
+      - "天気はどうですか"
+      - "今日の日付は？"
+
+  distress:
+    description: "精神的に辛い・不安を表明"
+    example_utterances:
+      - "もう無理です"
+      - "怖くてできない"
+      - "助けてください"
+
+# ============================================================================
+# 状態定義
+# ============================================================================
+states:
+  # --------------------------------------------------------------------------
+  # greeting: 挨拶・サービス説明
+  # --------------------------------------------------------------------------
+  greeting:
+    instructions: |
+      ユーザーに挨拶し、面接練習サービスの概要を簡潔に説明してください。
+      「行動面接」「技術面接」「ケース面接」の3種類があることを伝え、
+      どの面接タイプを練習したいか聞いてください。
+      温かく、励ましのある口調で話してください。
+    intents: [start_practice, provide_info, ask_help, off_topic, distress]
+    transitions:
+      - intent: start_practice
+        target_state: collecting_preferences
+      - intent: provide_info
+        target_state: collecting_preferences
+      - intent: distress
+        target_state: escalation
+
+  # --------------------------------------------------------------------------
+  # collecting_preferences: スロット収集
+  # --------------------------------------------------------------------------
+  collecting_preferences:
+    instructions: |
+      まだ聞いていない情報を自然な会話の中で収集してください。
+      必要な情報:
+      - 面接タイプ（行動面接 / 技術面接 / ケース面接）
+      - 志望するポジション・職種
+      - 経験レベル（ジュニア / ミドル / シニア）
+      一度に全部聞くのではなく、会話の流れの中で自然に聞いてください。
+      ユーザーが複数の情報を一度に提供した場合はすべて受け取ってください。
+    intents: [provide_info, ask_help, off_topic, distress]
+    required_slots: [interview_type, target_role, experience_level]
+    transitions:
+      - intent: provide_info
+        condition: all_required_slots_filled
+        target_state: confirm_setup
+      - intent: distress
+        target_state: escalation
+
+  # --------------------------------------------------------------------------
+  # confirm_setup: 設定確認
+  # --------------------------------------------------------------------------
+  confirm_setup:
+    instructions: |
+      収集した設定内容をユーザーに確認してください:
+      - 面接タイプ: {interview_type}
+      - 志望ポジション: {target_role}
+      - 経験レベル: {experience_level}
+      「この内容でよろしいですか？」と確認を取ってください。
+    intents: [confirm, change, distress]
+    transitions:
+      - intent: confirm
+        target_state: interviewing
+        actions: [reset_question_count]
+      - intent: change
+        target_state: collecting_preferences
+      - intent: distress
+        target_state: escalation
+
+  # --------------------------------------------------------------------------
+  # interviewing: 面接実施（質問出題）
+  # --------------------------------------------------------------------------
+  interviewing:
+    instructions: |
+      あなたは今、面接官です。プロフェッショナルだが親しみやすい態度で振る舞ってください。
+      面接タイプ: {interview_type}
+      志望ポジション: {target_role}
+      経験レベル: {experience_level}
+
+      1問ずつ面接の質問を出してください。
+      質問はユーザーの経験レベルとポジションに適した難易度にしてください。
+      質問を出したら、ユーザーの回答を待ってください。
+      これまでに {question_count} 問出題済みです。
+    intents: [answer, skip, end_interview, distress]
+    max_turns: 20
+    transitions:
+      - intent: answer
+        target_state: giving_feedback
+        actions: [increment_question_count]
+      - intent: skip
+        target_state: interviewing
+        actions: [increment_question_count]
+      - intent: end_interview
+        target_state: summary
+      - condition: question_count >= 5
+        target_state: summary
+      - intent: distress
+        target_state: escalation
+
+  # --------------------------------------------------------------------------
+  # giving_feedback: 回答へのフィードバック
+  # --------------------------------------------------------------------------
+  giving_feedback:
+    instructions: |
+      ユーザーの面接回答に対して、建設的なフィードバックを提供してください。
+      以下の観点でフィードバックしてください:
+      - 良かった点（必ず1つ以上）
+      - 改善できる点（具体的なアドバイス付き）
+      - STAR法（Situation, Task, Action, Result）の活用度（行動面接の場合）
+
+      フィードバックは短く要点をまとめ、長くなりすぎないようにしてください。
+      最後に「次の質問に進みますか？」と聞いてください。
+    intents: [next_question, end_interview, distress]
+    transitions:
+      - intent: next_question
+        target_state: interviewing
+      - intent: end_interview
+        target_state: summary
+      - intent: distress
+        target_state: escalation
+
+  # --------------------------------------------------------------------------
+  # summary: 総合評価
+  # --------------------------------------------------------------------------
+  summary:
+    instructions: |
+      面接練習の総合評価を提供してください。
+      - 全体的な印象
+      - 特に良かった点（2〜3個）
+      - 今後の改善ポイント（2〜3個）
+      - 次のステップの提案
+
+      出題数: {question_count} 問
+      面接タイプ: {interview_type}
+      志望ポジション: {target_role}
+
+      「もう一度練習しますか？それとも終了しますか？」と聞いてください。
+    intents: [restart, end_interview, distress]
+    transitions:
+      - intent: restart
+        target_state: greeting
+        actions: [clear_slots]
+      - intent: end_interview
+        target_state: farewell
+
+  # --------------------------------------------------------------------------
+  # farewell: 終了
+  # --------------------------------------------------------------------------
+  farewell:
+    instructions: |
+      面接練習を終了します。
+      ユーザーの頑張りを称え、励ましの言葉を伝えてください。
+      「本番の面接でもきっとうまくいきますよ」のような前向きなメッセージで締めくくってください。
+    intents: []
+    is_terminal: true
+    transitions: []
+
+  # --------------------------------------------------------------------------
+  # escalation: 有人引継ぎ
+  # --------------------------------------------------------------------------
+  escalation:
+    instructions: |
+      ユーザーが精神的に辛い状態にある可能性があります。
+      共感を示し、「担当者におつなぎします。少々お待ちください。」と伝えてください。
+      無理に面接練習を続けることを勧めないでください。
+    intents: []
+    is_terminal: true
+    transitions: []
+
+# ============================================================================
+# 安全ルール
+# ============================================================================
+safety_rules:
+  - type: prohibited
+    pattern: "差別|偏見|人種|性別で判断|ハラスメント"
+    action: block
+    message: |
+      面接練習の範囲外の話題です。
+      面接に関する質問や練習に集中しましょう。
+
+  - type: escalation
+    pattern: "もう無理|死にたい|助けて|怖い|辛い|パニック"
+    action: escalate
+    message: |
+      ユーザーが精神的に辛い状態です。
+      共感を示し、担当者への引継ぎを案内してください。
+
+  - type: guardrail
+    pattern: "採点基準|評価基準|正解を教えて|答えを教えて"
+    action: warn
+    message: |
+      採点基準や正解は開示しないでください。
+      「面接では正解は一つではなく、あなた自身の経験と考えを
+      伝えることが大切です」と伝えてください。
+
+  - type: guardrail
+    pattern: "面接官をやめて|キャラを変えて|普通に話して"
+    action: warn
+    message: |
+      面接官の役割を維持してください。
+      「面接練習中ですので、このまま面接形式で進めさせてください」と伝えてください。

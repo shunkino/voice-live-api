@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lexicon version="1.0"
+      xmlns="http://www.w3.org/2005/01/pronunciation-lexicon"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.w3.org/2005/01/pronunciation-lexicon
+        http://www.w3.org/TR/2007/CR-pronunciation-lexicon-20071212/pls.xsd"
+      alphabet="ipa" xml:lang="ja-JP">
+
+  <!-- ==================== 企業名・ブランド名 ==================== -->
+  <lexeme>
+    <grapheme>Azure</grapheme>
+    <phoneme>adʒɯːɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Microsoft</grapheme>
+    <phoneme>maikɯɾosohɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Contoso</grapheme>
+    <phoneme>koɴtoːso</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Google</grapheme>
+    <phoneme>gɯːgɯɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Apple</grapheme>
+    <phoneme>appɯɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>NVIDIA</grapheme>
+    <phoneme>eɴbidia</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Huawei</grapheme>
+    <phoneme>haɯei</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Xiaomi</grapheme>
+    <phoneme>ɕaomi</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Spotify</grapheme>
+    <phoneme>sɯpotifai</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Netflix</grapheme>
+    <phoneme>nettohɯɾikkɯsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Uber</grapheme>
+    <phoneme>ɯːbaː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>LinkedIn</grapheme>
+    <phoneme>ɾiɴkɯtoiɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Salesforce</grapheme>
+    <phoneme>seːɾɯsɯhoːsɯ</phoneme>
+  </lexeme>
+
+  <!-- ==================== Microsoft 製品・サービス ==================== -->
+  <lexeme>
+    <grapheme>Copilot</grapheme>
+    <phoneme>kopaiɾotto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>VoiceLive</grapheme>
+    <phoneme>boisɯɾaibɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Teams</grapheme>
+    <phoneme>tɕiːmɯzɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>OneDrive</grapheme>
+    <phoneme>waɴdoɾaibɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>SharePoint</grapheme>
+    <phoneme>ɕeapoiɴto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Outlook</grapheme>
+    <phoneme>aɯtoɾɯkkɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>PowerBI</grapheme>
+    <phoneme>paɯaːbiːai</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Entra</grapheme>
+    <phoneme>eɴtoɾa</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Intune</grapheme>
+    <phoneme>iɴtɕɯːɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Dynamics</grapheme>
+    <phoneme>dainamikkɯsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Fabric</grapheme>
+    <phoneme>habɯɾikkɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Purview</grapheme>
+    <phoneme>paːbjɯː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Defender</grapheme>
+    <phoneme>diheɴdaː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Sentinel</grapheme>
+    <phoneme>seɴtineɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>GitHub</grapheme>
+    <phoneme>gittohabbɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>DevOps</grapheme>
+    <phoneme>debɯoppɯsɯ</phoneme>
+  </lexeme>
+
+  <!-- ==================== AI・機械学習用語 ==================== -->
+  <lexeme>
+    <grapheme>GPT</grapheme>
+    <phoneme>dʒiːpiːtiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>ChatGPT</grapheme>
+    <phoneme>tɕattodʒiːpiːtiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>OpenAI</grapheme>
+    <phoneme>oːpɯɴeːai</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>LLM</grapheme>
+    <phoneme>eɾɯeɾɯemɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>RAG</grapheme>
+    <phoneme>ɾagɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Transformer</grapheme>
+    <phoneme>toɾaɴsɯhoːmaː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>embedding</grapheme>
+    <phoneme>eɴbeddiɴgɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>fine-tuning</grapheme>
+    <phoneme>haiɴtɕɯːniɴgɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>hallucination</grapheme>
+    <phoneme>haɾɯɕineːɕoɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>multimodal</grapheme>
+    <phoneme>maɾɯtɕimoːdaɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>agentic</grapheme>
+    <phoneme>eːdʒeɴtikkɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>prompt</grapheme>
+    <phoneme>pɯɾoɴpɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>token</grapheme>
+    <phoneme>toːkɯɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>inference</grapheme>
+    <phoneme>iɴhaɾeɴsɯ</phoneme>
+  </lexeme>
+
+  <!-- ==================== クラウド・インフラ用語 ==================== -->
+  <lexeme>
+    <grapheme>Kubernetes</grapheme>
+    <phoneme>kɯbaːnetisɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Docker</grapheme>
+    <phoneme>dokkɑː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Terraform</grapheme>
+    <phoneme>teɾahoːmɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Ansible</grapheme>
+    <phoneme>aɴɕibɯɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>nginx</grapheme>
+    <phoneme>eɴdʒiɴekkɯsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Redis</grapheme>
+    <phoneme>ɾedisɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>PostgreSQL</grapheme>
+    <phoneme>posɯtoɡɯɾesɯkjɯːeɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>MongoDB</grapheme>
+    <phoneme>moɴɡodiːbiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Cosmos DB</grapheme>
+    <phoneme>kozɯmosɯdiːbiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>GraphQL</grapheme>
+    <phoneme>gɯɾahɯkjɯːeɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>WebSocket</grapheme>
+    <phoneme>ɯebbɯsoketto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>OAuth</grapheme>
+    <phoneme>oːoːsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>CI/CD</grapheme>
+    <phoneme>ɕiːaiɕiːdiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>microservices</grapheme>
+    <phoneme>maikɯɾosaːbisɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>serverless</grapheme>
+    <phoneme>saːbaːɾesɯ</phoneme>
+  </lexeme>
+
+  <!-- ==================== プログラミング言語・フレームワーク ==================== -->
+  <lexeme>
+    <grapheme>Python</grapheme>
+    <phoneme>paisoɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>JavaScript</grapheme>
+    <phoneme>dʒabasɯkɯɾipɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>TypeScript</grapheme>
+    <phoneme>taipɯsɯkɯɾipɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Rust</grapheme>
+    <phoneme>ɾasɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Kotlin</grapheme>
+    <phoneme>kotoɾiɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Swift</grapheme>
+    <phoneme>sɯiɸɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Vue.js</grapheme>
+    <phoneme>bjɯːdʒeːesɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>React</grapheme>
+    <phoneme>ɾiakɯto</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Next.js</grapheme>
+    <phoneme>nekɯsɯtodʒeːesɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>FastAPI</grapheme>
+    <phoneme>hasɯtoeipiːai</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Django</grapheme>
+    <phoneme>dʒaɴgo</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>Flutter</grapheme>
+    <phoneme>hɯɾattaː</phoneme>
+  </lexeme>
+
+  <!-- ==================== 略語・アクロニム ==================== -->
+  <lexeme>
+    <grapheme>API</grapheme>
+    <phoneme>eːpiːai</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>SDK</grapheme>
+    <phoneme>esɯdiːkeː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>SaaS</grapheme>
+    <phoneme>saːsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>PaaS</grapheme>
+    <phoneme>paːsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>IaaS</grapheme>
+    <phoneme>iaːsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>IoT</grapheme>
+    <phoneme>aioːtiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>RBAC</grapheme>
+    <phoneme>aːɾɯbakkɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>SSO</grapheme>
+    <phoneme>esɯesɯoː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>MFA</grapheme>
+    <phoneme>emɯeɸɯeː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>CORS</grapheme>
+    <phoneme>koːsɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>JWT</grapheme>
+    <phoneme>dʒeːdabɯɾjɯːtiː</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>YAML</grapheme>
+    <phoneme>jamɯɾɯ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>JSON</grapheme>
+    <phoneme>dʒeːsoɴ</phoneme>
+  </lexeme>
+
+  <lexeme>
+    <grapheme>gRPC</grapheme>
+    <phoneme>dʒiːaːɾɯpiːɕiː</phoneme>
+  </lexeme>
+
+  <!-- 独自の読み方が必要な単語をここに追加 -->
+
+</lexicon>

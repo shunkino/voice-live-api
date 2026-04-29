@@ -1,0 +1,54 @@
+# Scenario Flow Quality Evaluator
+# 評価対象: シナリオフロー全体の自然さ・一貫性
+# カテゴリ: agents
+
+name: scenario_flow_quality
+display_name: "Scenario Flow Quality"
+description: |
+  Evaluates the overall quality and naturalness of a multi-turn conversation
+  flow within the scenario. Checks for coherent transitions, appropriate
+  context retention, and conversational flow.
+
+version: "1.0"
+category: agents
+
+annotation:
+  type: llm_judge
+  model_deployment: gpt-5.2
+
+scoring:
+  scale: 1-5
+  criteria:
+    5: "会話フローが極めて自然。状態遷移がシームレスで、文脈保持が完璧。"
+    4: "フローは自然で一貫性がある。ごく小さな不自然さはあるがユーザー体験に影響なし。"
+    3: "フロー全体は機能するが、一部の遷移で不自然さや文脈のギャップがある。"
+    2: "フローに明確な断絶がある。ユーザーが混乱する可能性がある。"
+    1: "フローが崩壊している。遷移が意味をなさず、文脈が失われている。"
+
+prompt_template: |
+  あなたは音声エージェントのシナリオ品質評価者です。
+  以下の会話フローの自然さ・一貫性を評価してください。
+
+  ## 評価対象
+  - ユーザー入力: {{query}}
+  - エージェント応答: {{response}}
+  - コンテキスト（状態遷移・スロット情報）: {{context}}
+  - 期待される行動: {{expected_behavior}}
+
+  ## 評価ポイント
+  1. 状態遷移の自然さ
+  2. 文脈の保持・活用
+  3. 会話の連続性
+  4. ユーザー意図への適切な対応
+
+  ## 出力形式
+  score: <1-5>
+  reasoning: <評価理由>
+
+column_mapping:
+  query: "${data.query}"
+  response: "${data.response}"
+  expected_behavior: "${data.expected_behavior}"
+  context: "${data.context}"
+
+threshold: 4.0
