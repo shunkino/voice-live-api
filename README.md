@@ -23,10 +23,17 @@ pip install -r requirements.txt
 `.env` ファイルをプロジェクトルートに作成し、以下の環境変数を設定してください。
 
 ```env
-AZURE_VOICE_LIVE_ENDPOINT=<Voice Live API のエンドポイント>
-AZURE_VOICE_LIVE_KEY=<API キー（キー認証の場合）>
+AZURE_VOICELIVE_ENDPOINT=<Voice Live API のエンドポイント>
 PROJECT_ENDPOINT=<Azure AI Foundry プロジェクトエンドポイント>
 AGENT_NAME=<エージェント名（Agents 連携時）>
+MODEL_DEPLOYMENT_NAME=gpt-realtime
+```
+
+API キーが無効化されているサブスクリプションでは、Azure CLI でサインインしたうえで `--use-token-credential` を付けて実行してください。
+
+```powershell
+az login
+python voice-live-quickstart.py --use-token-credential
 ```
 
 ## サンプル一覧

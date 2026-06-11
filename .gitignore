@@ -36,5 +36,8 @@ logs/
 # Azure Foundry results
 .foundry/results/
 
+# Bicep build output
+infra/main.json
+
 # PyAudio build artifacts
 portaudio/
