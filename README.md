@@ -36,6 +36,59 @@ az login
 python voice-live-quickstart.py --use-token-credential
 ```
 
+## Azure リソースのデプロイ
+
+`infra/` ディレクトリの Bicep テンプレートで、このサンプルに必要な Azure リソースをデプロイできます。
+
+デプロイされる主なリソース:
+
+| リソース | 用途 |
+|---|---|
+| Azure AI Services | Voice Live API エンドポイント、`gpt-realtime` モデルデプロイ |
+| Azure AI Hub | Foundry プロジェクトの Hub |
+| Azure AI Project | `PROJECT_ENDPOINT` として使用 |
+| Storage Account | AI Hub のバックエンド |
+| Key Vault | AI Hub のシークレット管理 |
+
+PowerShell では行継続にバッククォート `` ` `` を使います。
+
+```powershell
+az login
+
+az group create `
+  -n voicelivedemo `
+  -l eastus2
+
+$principalId = az ad signed-in-user show --query id -o tsv
+
+az deployment group create `
+  -g voicelivedemo `
+  -f infra/main.bicep `
+  -p infra/main.bicepparam `
+  -p openAiUserPrincipalId=$principalId
+```
+
+デプロイ後、出力値を確認します。
+
+```powershell
+az deployment group show `
+  -g voicelivedemo `
+  -n main `
+  --query properties.outputs `
+  -o yaml
+```
+
+出力された値を `.env` に設定します。
+
+```env
+AZURE_VOICELIVE_ENDPOINT=<voiceLiveEndpoint の value>
+PROJECT_ENDPOINT=<projectEndpoint の value>
+AGENT_NAME=<agentName の value>
+MODEL_DEPLOYMENT_NAME=<modelDeploymentName の value>
+```
+
+この Bicep テンプレートは `disableLocalAuth=true` を前提にしたキーレス構成です。API キーは出力されません。ローカル実行時は Azure CLI でサインインし、`--use-token-credential` を付けて実行してください。
+
 ## サンプル一覧
 
 | ファイル | 概要 |
