@@ -84,67 +84,6 @@ main {
   display: block;
 }
 
-/* Local face model (avatar-off, viseme/blendshape driven) */
-.face-model {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(120% 120% at 50% 20%, #16223f 0, #05070f 70%);
-}
-
-.face-model.active {
-  display: flex;
-}
-
-.face-svg {
-  width: 80%;
-  height: 80%;
-}
-
-.face-head {
-  fill: #f2c9a6;
-  stroke: #d8a07a;
-  stroke-width: 2;
-}
-
-.face-brow {
-  fill: #6b4a35;
-}
-
-.face-eye-white {
-  fill: #ffffff;
-  stroke: #cdb39c;
-  stroke-width: 1;
-}
-
-.face-pupil {
-  fill: #3a2a20;
-}
-
-.face-lid {
-  fill: #f2c9a6;
-}
-
-.face-nose {
-  fill: none;
-  stroke: #d8a07a;
-  stroke-width: 2;
-  stroke-linejoin: round;
-}
-
-.face-mouth-fill {
-  fill: #6e2230;
-}
-
-.face-mouth {
-  fill: none;
-  stroke: #b9485a;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
 .placeholder {
   text-align: center;
   color: var(--muted);

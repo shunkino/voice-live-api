@@ -37,6 +37,9 @@ from azure.ai.voicelive.models import (
 )
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials_async import AsyncTokenCredential
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from ..config import ExperimentConfig
 from ..session_factory import build_session
@@ -56,10 +59,6 @@ def create_app(
     :param credential_factory: zero-arg callable returning a fresh async
         credential (or :class:`AzureKeyCredential`) per browser session.
     """
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-    from fastapi.responses import HTMLResponse, JSONResponse
-    from fastapi.staticfiles import StaticFiles
-
     app = FastAPI(title="Voice Live Experiments")
 
     @app.get("/", response_class=HTMLResponse)
@@ -74,9 +73,6 @@ def create_app(
                 "avatar": config.avatar.enabled,
                 "avatarType": config.avatar.avatar_type,
                 "transcriptionModel": config.transcription_model,
-                "faceModel": config.local_face_model,
-                "viseme": config.enable_viseme,
-                "blendshapes": config.enable_blendshapes,
                 "summary": config.summary(),
             }
         )
@@ -247,51 +243,6 @@ class VoiceLiveBridge:
                 await self._send(
                     {"type": "audio_delta", "audio": _delta_b64(event.delta)}
                 )
-
-        # ---- Local face model: animation cues (visemes / blendshapes) ----
-        # These drive a face model rendered in the browser. They're only useful
-        # when the server-side video avatar is off (otherwise the avatar already
-        # carries a lip-synced face on its own video track).
-        elif etype == ServerEventType.RESPONSE_CREATED:
-            if self.config.local_face_model:
-                await self._send(
-                    {
-                        "type": "animation_started",
-                        "responseId": getattr(
-                            getattr(event, "response", None), "id", None
-                        ),
-                    }
-                )
-        elif etype == ServerEventType.RESPONSE_ANIMATION_VISEME_DELTA:
-            if self.config.local_face_model:
-                await self._send(
-                    {
-                        "type": "viseme",
-                        "visemeId": int(getattr(event, "viseme_id", 0) or 0),
-                        "audioOffsetMs": int(
-                            getattr(event, "audio_offset_ms", 0) or 0
-                        ),
-                    }
-                )
-        elif etype == ServerEventType.RESPONSE_ANIMATION_BLENDSHAPES_DELTA:
-            if self.config.local_face_model:
-                frames = getattr(event, "frames", None)
-                # frames is either a list[list[float]] or an (unsupported here)
-                # encoded string; only forward the structured form.
-                if isinstance(frames, list):
-                    await self._send(
-                        {
-                            "type": "blendshapes",
-                            "frames": frames,
-                            "frameIndex": int(getattr(event, "frame_index", 0) or 0),
-                        }
-                    )
-        elif etype in (
-            ServerEventType.RESPONSE_ANIMATION_VISEME_DONE,
-            ServerEventType.RESPONSE_ANIMATION_BLENDSHAPES_DONE,
-        ):
-            if self.config.local_face_model:
-                await self._send({"type": "animation_done"})
 
         elif etype == ServerEventType.SESSION_AVATAR_SWITCH_TO_SPEAKING:
             await self._send({"type": "avatar_state", "state": "speaking"})

@@ -16,7 +16,7 @@ sys.path.insert(0, ROOT_DIR)
 
 from voicelive_demo.config import ExperimentConfig
 from voicelive_demo.web import server as server_mod
-from voicelive_demo.web.server import VoiceLiveBridge
+from voicelive_demo.web.server import VoiceLiveBridge, create_app
 
 
 class _Resource:
@@ -93,3 +93,17 @@ async def _run_stop_case():
         assert conn.closed is True
     finally:
         server_mod.connect = orig
+
+
+def test_websocket_route_does_not_require_fake_websocket_param():
+    app = create_app(ExperimentConfig(), lambda: object())
+    ws_route = next(
+        route for route in app.routes if type(route).__name__ == "APIWebSocketRoute"
+    )
+    params = (
+        ws_route.dependant.path_params
+        + ws_route.dependant.query_params
+        + ws_route.dependant.header_params
+        + ws_route.dependant.cookie_params
+    )
+    assert [p.name for p in params] == []

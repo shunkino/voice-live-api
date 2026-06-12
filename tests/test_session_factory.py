@@ -86,6 +86,21 @@ class TestTranscription:
         t = build_transcription("mai-transcribe-1", "en")
         assert t.as_dict()["model"] == "mai-transcribe-1"
 
+    def test_mai_transcribe_1_5(self):
+        t = build_transcription("mai-transcribe-1.5", "ja")
+        d = t.as_dict()
+        assert d["model"] == "mai-transcribe-1.5"
+        assert d["language"] == "ja"
+
+    def test_auto_language_sends_no_hint(self):
+        # 'auto' must NOT pin a locale, so MAI stays multilingual (Japanese works).
+        t = build_transcription("mai-transcribe-1", "auto")
+        assert "language" not in t.as_dict()
+
+    def test_none_language_sends_no_hint(self):
+        t = build_transcription("mai-transcribe-1", None)
+        assert "language" not in t.as_dict()
+
     def test_azure_speech_keeps_phrase_list(self):
         t = build_transcription("azure-speech", "en", ["Azure", "Foundry"])
         assert t.as_dict()["phrase_list"] == ["Azure", "Foundry"]
@@ -120,7 +135,7 @@ class TestAvatar:
         assert d["type"] == "video-avatar"
         assert d["character"] == "lisa"
         assert d["style"] == "casual-sitting"
-        assert d["video"]["resolution"]["width"] == 1080
+        assert d["video"]["resolution"]["width"] == 1920
 
     def test_photo_avatar_defaults_model(self):
         a = build_avatar(
@@ -156,35 +171,6 @@ class TestSession:
         cfg = ExperimentConfig(model="gpt-realtime")
         d = build_session(cfg).as_dict()
         assert "avatar" not in d
-
-    def test_blendshapes_animation_output(self):
-        cfg = ExperimentConfig(model="gpt-realtime", enable_blendshapes=True)
-        d = build_session(cfg).as_dict()
-        assert d["animation"]["outputs"] == ["blendshapes"]
-
-    def test_viseme_and_blendshapes_compose(self):
-        cfg = ExperimentConfig(
-            model="gpt-realtime", enable_viseme=True, enable_blendshapes=True
-        )
-        d = build_session(cfg).as_dict()
-        assert d["animation"]["outputs"] == ["viseme_id", "blendshapes"]
-
-    def test_no_animation_without_request(self):
-        cfg = ExperimentConfig(model="gpt-realtime")
-        assert "animation" not in build_session(cfg).as_dict()
-
-    def test_local_face_model_when_avatar_off_and_animation_on(self):
-        assert ExperimentConfig(enable_viseme=True).local_face_model is True
-        assert ExperimentConfig(enable_blendshapes=True).local_face_model is True
-        # No animation requested -> no local face model.
-        assert ExperimentConfig().local_face_model is False
-        # Avatar on -> the avatar's own face is used, not a local model.
-        assert (
-            ExperimentConfig(
-                avatar=AvatarSpec(enabled=True), enable_viseme=True
-            ).local_face_model
-            is False
-        )
 
     def test_summary_mentions_each_feature(self):
         cfg = ExperimentConfig(

@@ -123,9 +123,8 @@ voicelive_demo/
 ├── audio.py             # PyAudio 入出力（CLI 用、共通実装）
 ├── cli_assistant.py     # CLI フロントエンド（マイク/スピーカー）
 └── web/
-    ├── server.py        # FastAPI：ブラウザ ⇄ Voice Live を中継、アバター SDP / viseme をリレー
-    └── static/          # ブラウザクライアント（WebRTC アバター・ローカルフェイスモデル・字幕 UI）
-        └── face.js      # viseme / blendshape → フェイスリグのマッピング層
+    ├── server.py        # FastAPI：ブラウザ ⇄ Voice Live を中継、アバター SDP をリレー
+    └── static/          # ブラウザクライアント（WebRTC アバター・マイク取得・字幕 UI）
 ```
 
 - **CLI モード** (`--mode cli`): ターミナルでマイク/スピーカー対話。機能①③を試せます。
@@ -166,34 +165,7 @@ python voice-live-experiments.py --mode cli --use-token-credential `
 | `--voice` / `--voice-base-model` / `--voice-endpoint-id` | 音声名 / パーソナル基盤モデル / カスタム音声 GUID |
 | `--transcription-model` | `azure-speech` / `mai-transcribe-1` / `whisper-1` / `gpt-4o-transcribe` ほか |
 | `--avatar` / `--avatar-type` / `--avatar-character` / `--avatar-style` | アバター設定（Web モード） |
-| `--viseme` | リップシンク用の viseme 出力を要求（ローカルフェイスモデルの口の動き） |
-| `--blendshapes` | 3D ブレンドシェイプ出力を要求（眉・まばたき・口角などの表情） |
-
-### ④ ローカルフェイスモデル（自前モデルに表情をマッピング）
-
-サーバー側でレンダリングされる動画アバター（機能②）の代わりに、**ブラウザ内で
-自前のフェイスモデルをレンダリング**し、Voice Live API が返す顔アニメーション
-キュー（viseme / blendshape）をそのモデルのリグにマッピングできます。Azure は
-音声とアニメーションの手がかりだけを提供し、描画はブラウザ側で行います。
-
-- `--avatar` を **付けず**に `--viseme`（および/または `--blendshapes`）を指定すると、
-  Web クライアントが軽量な 2D フェイス（SVG）を表示します。
-- **viseme ID（0〜21）** は標準 Azure Speech viseme セットで、口の開き・横幅・
-  丸めにマッピングされ、`audio_offset_ms` で音声再生に同期します。
-- **blendshapes**（ARKit 互換チャンネル, 60fps）が有効な場合は、眉・まばたき・
-  笑顔なども含めた表情を駆動します。
-- マッピング層は `voicelive_demo/web/static/face.js`（`visemeToShape` /
-  `blendshapesToRig`）に分離されているため、同じアニメーションストリームを
-  Three.js / Unity / Unreal などの自前リグに差し替えることも容易です。
-
-```powershell
-az login
-
-# 自前フェイスモデルを viseme + blendshapes で駆動（アバターは使わない）
-python voice-live-experiments.py --mode web --use-token-credential `
-  --viseme --blendshapes
-# → http://127.0.0.1:8000 を開き、「Start conversation」で話しかける
-```
+| `--viseme` | リップシンク用の viseme 出力を要求 |
 
 > **注意**
 > - パーソナル音声・プロフェッショナルカスタム音声・カスタムアバターは
