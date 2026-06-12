@@ -149,6 +149,21 @@ class ExperimentConfig:
 
     # Emit visemes alongside audio (useful with avatars / lip-sync UIs).
     enable_viseme: bool = False
+    # Emit 3D blendshape frames (richer facial expression for a local model rig).
+    enable_blendshapes: bool = False
+
+    @property
+    def local_face_model(self) -> bool:
+        """True when the browser should render its own face model.
+
+        We drive a locally rendered 2D/3D face from the animation stream
+        (visemes and/or blendshapes) whenever the server-side video avatar is
+        *off* and at least one animation output is requested. Azure then only
+        supplies voice + animation cues; the model is rendered in the browser.
+        """
+        return (not self.avatar.enabled) and (
+            self.enable_viseme or self.enable_blendshapes
+        )
 
     def validate(self) -> None:
         self.voice.validate()
@@ -192,9 +207,21 @@ class ExperimentConfig:
             if self.avatar.enabled
             else "off"
         )
+        anim = []
+        if self.enable_viseme:
+            anim.append("viseme")
+        if self.enable_blendshapes:
+            anim.append("blendshapes")
+        if self.local_face_model:
+            face_desc = f"local face model ({'+'.join(anim)})"
+        elif anim:
+            face_desc = "+".join(anim)
+        else:
+            face_desc = "off"
         return (
             f"model={self.model} | voice={voice_desc} | "
-            f"transcription={self.transcription_model} | avatar={avatar_desc}"
+            f"transcription={self.transcription_model} | avatar={avatar_desc} | "
+            f"face={face_desc}"
         )
 
 
@@ -353,6 +380,12 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default=_env_bool("AZURE_VOICELIVE_VISEME", False),
         help="Request viseme animation output alongside audio.",
     )
+    av.add_argument(
+        "--blendshapes",
+        action="store_true",
+        default=_env_bool("AZURE_VOICELIVE_BLENDSHAPES", False),
+        help="Request 3D blendshape animation frames (richer local face rig).",
+    )
 
 
 def config_from_args(args: argparse.Namespace) -> ExperimentConfig:
@@ -388,6 +421,7 @@ def config_from_args(args: argparse.Namespace) -> ExperimentConfig:
         transcription_language=args.transcription_language,
         phrase_list=list(args.phrase_list or []),
         enable_viseme=args.viseme,
+        enable_blendshapes=args.blendshapes,
     )
     cfg.validate()
     return cfg

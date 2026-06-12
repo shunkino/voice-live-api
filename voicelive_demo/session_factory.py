@@ -163,11 +163,15 @@ def build_session(cfg: ExperimentConfig) -> RequestSession:
     cfg.validate()
 
     animation: Optional[Animation] = None
-    if cfg.enable_viseme or cfg.avatar.enabled:
-        # Visemes are handy for lip-sync overlays; always request them with an
-        # avatar, and on demand otherwise.
-        if cfg.enable_viseme:
-            animation = Animation(outputs=[AnimationOutputType.VISEME_ID])
+    outputs = []
+    if cfg.enable_viseme:
+        outputs.append(AnimationOutputType.VISEME_ID)
+    if cfg.enable_blendshapes:
+        outputs.append(AnimationOutputType.BLENDSHAPES)
+    if outputs:
+        # Visemes/blendshapes are handy both for the server-side avatar's
+        # lip-sync and for driving our own locally rendered face model.
+        animation = Animation(outputs=outputs)
 
     session = RequestSession(
         modalities=[Modality.TEXT, Modality.AUDIO],

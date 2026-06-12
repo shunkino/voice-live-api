@@ -23,15 +23,25 @@ const els = {
   placeholderText: document.getElementById("placeholderText"),
   stateBadge: document.getElementById("stateBadge"),
   stateDot: document.getElementById("stateDot"),
+  faceModel: document.getElementById("faceModel"),
 };
 
-let appConfig = { avatar: false, transcriptionModel: "—", summary: "" };
+let appConfig = {
+  avatar: false,
+  faceModel: false,
+  viseme: false,
+  blendshapes: false,
+  transcriptionModel: "—",
+  summary: "",
+};
 let ws = null;
 let pc = null;
 let micStream = null;
 let captureCtx = null;
 let captureNode = null;
 let playback = null; // PCM playback scheduler (avatar-off)
+let faceRig = null; // local face model (avatar-off + animation)
+let animScheduler = null; // viseme/blendshape -> face rig
 let running = false;
 
 // Interim transcript bubbles, keyed by role.
@@ -48,9 +58,13 @@ async function init() {
   }
   els.summary.textContent = appConfig.summary || "";
   els.transModel.textContent = appConfig.transcriptionModel || "—";
-  els.placeholderText.textContent = appConfig.avatar
-    ? "Connecting avatar…"
-    : "Avatar is off — audio only.";
+  if (appConfig.faceModel) {
+    els.placeholderText.textContent = "Local face model — speak to animate it.";
+  } else {
+    els.placeholderText.textContent = appConfig.avatar
+      ? "Connecting avatar…"
+      : "Avatar is off — audio only.";
+  }
   els.startBtn.addEventListener("click", start);
   els.stopBtn.addEventListener("click", stop);
 }
@@ -87,6 +101,20 @@ async function start() {
     playback = new PcmPlayer(TARGET_RATE);
   }
 
+  if (appConfig.faceModel && window.FaceRig) {
+    faceRig = new FaceRig(els.faceModel);
+    animScheduler = new AnimationScheduler(faceRig);
+    animScheduler.start();
+    // Anchor the animation timeline to the moment audio actually starts.
+    if (playback) {
+      playback.onUtteranceStart = (whenMs) => {
+        if (animScheduler) animScheduler.setAnchor(whenMs);
+      };
+    }
+    els.faceModel.classList.add("active");
+    els.avatarPlaceholder.style.display = "none";
+  }
+
   connectWebSocket();
 }
 
@@ -120,6 +148,26 @@ async function handleServerMessage(msg) {
 
     case "speech_started":
       if (playback) playback.flush(); // barge-in
+      if (animScheduler) animScheduler.reset(); // face back to neutral
+      break;
+
+    case "animation_started":
+      if (animScheduler) animScheduler.reset();
+      break;
+
+    case "viseme":
+      if (animScheduler) animScheduler.pushViseme(msg.visemeId, msg.audioOffsetMs);
+      break;
+
+    case "blendshapes":
+      if (animScheduler && Array.isArray(msg.frames)) {
+        msg.frames.forEach((frame, i) =>
+          animScheduler.pushFrame(frame, msg.frameIndex + i)
+        );
+      }
+      break;
+
+    case "animation_done":
       break;
 
     case "transcript_delta":
@@ -291,6 +339,15 @@ function stop() {
   if (playback) playback.close();
   playback = null;
 
+  if (animScheduler) animScheduler.stop();
+  if (faceRig) faceRig.stop();
+  animScheduler = null;
+  faceRig = null;
+  if (els.faceModel) {
+    els.faceModel.classList.remove("active");
+    els.faceModel.innerHTML = "";
+  }
+
   els.avatar.classList.remove("active");
   els.avatar.srcObject = null;
   els.avatarPlaceholder.style.display = "";
@@ -357,6 +414,8 @@ class PcmPlayer {
     this.rate = rate;
     this.nextTime = 0;
     this.sources = [];
+    this.started = false; // true once the current utterance has begun
+    this.onUtteranceStart = null; // (wallClockMs) => void
   }
 
   enqueueBase64(b64) {
@@ -372,6 +431,15 @@ class PcmPlayer {
 
     const now = this.ctx.currentTime;
     if (this.nextTime < now) this.nextTime = now + 0.05;
+    // The first chunk of a fresh utterance defines the animation anchor: the
+    // wall-clock time at which audio offset 0 is heard.
+    if (!this.started) {
+      this.started = true;
+      if (this.onUtteranceStart) {
+        const leadMs = (this.nextTime - now) * 1000;
+        this.onUtteranceStart(performance.now() + leadMs);
+      }
+    }
     src.start(this.nextTime);
     this.nextTime += buffer.duration;
     this.sources.push(src);
@@ -388,6 +456,7 @@ class PcmPlayer {
     });
     this.sources = [];
     this.nextTime = 0;
+    this.started = false;
   }
 
   close() {

@@ -157,6 +157,35 @@ class TestSession:
         d = build_session(cfg).as_dict()
         assert "avatar" not in d
 
+    def test_blendshapes_animation_output(self):
+        cfg = ExperimentConfig(model="gpt-realtime", enable_blendshapes=True)
+        d = build_session(cfg).as_dict()
+        assert d["animation"]["outputs"] == ["blendshapes"]
+
+    def test_viseme_and_blendshapes_compose(self):
+        cfg = ExperimentConfig(
+            model="gpt-realtime", enable_viseme=True, enable_blendshapes=True
+        )
+        d = build_session(cfg).as_dict()
+        assert d["animation"]["outputs"] == ["viseme_id", "blendshapes"]
+
+    def test_no_animation_without_request(self):
+        cfg = ExperimentConfig(model="gpt-realtime")
+        assert "animation" not in build_session(cfg).as_dict()
+
+    def test_local_face_model_when_avatar_off_and_animation_on(self):
+        assert ExperimentConfig(enable_viseme=True).local_face_model is True
+        assert ExperimentConfig(enable_blendshapes=True).local_face_model is True
+        # No animation requested -> no local face model.
+        assert ExperimentConfig().local_face_model is False
+        # Avatar on -> the avatar's own face is used, not a local model.
+        assert (
+            ExperimentConfig(
+                avatar=AvatarSpec(enabled=True), enable_viseme=True
+            ).local_face_model
+            is False
+        )
+
     def test_summary_mentions_each_feature(self):
         cfg = ExperimentConfig(
             voice=VoiceSpec(voice_type="custom", name="b", endpoint_id="e"),
