@@ -153,6 +153,10 @@ async function handleServerMessage(msg) {
 
     case "animation_started":
       if (animScheduler) animScheduler.reset();
+      // Re-arm the audio anchor so the next response's first audio chunk
+      // re-establishes the animation timeline (without this, only the first
+      // response would animate).
+      if (playback) playback.started = false;
       break;
 
     case "viseme":
