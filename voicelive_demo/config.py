@@ -43,6 +43,7 @@ PERSONAL_VOICE_BASE_MODELS = (
 TRANSCRIPTION_MODELS = (
     "azure-speech",
     "mai-transcribe-1",
+    "mai-transcribe-1.5",
     "whisper-1",
     "gpt-4o-transcribe",
     "gpt-4o-mini-transcribe",
@@ -101,8 +102,8 @@ class AvatarSpec:
     customized: bool = False
     # Base model required for photo avatars (currently only "vasa-1").
     model: Optional[str] = None
-    video_width: int = 1080
-    video_height: int = 1920
+    video_width: int = 1920
+    video_height: int = 1080
     video_bitrate: int = 2_000_000
     video_codec: str = "h264"
     background_color: Optional[str] = "#FFFFFFFF"
@@ -144,7 +145,7 @@ class ExperimentConfig:
 
     # --- Feature #3: transcription ---
     transcription_model: str = "azure-speech"
-    transcription_language: Optional[str] = "en"
+    transcription_language: Optional[str] = "auto"
     phrase_list: List[str] = field(default_factory=list)
 
     # Emit visemes alongside audio (useful with avatars / lip-sync UIs).
@@ -324,12 +325,14 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--transcription-model",
         choices=TRANSCRIPTION_MODELS,
         default=os.environ.get("AZURE_VOICELIVE_TRANSCRIPTION_MODEL", "azure-speech"),
-        help="Input audio transcription model. Use mai-transcribe-1 to try MAI.",
+        help="Input audio transcription model. Use mai-transcribe-1 or "
+        "mai-transcribe-1.5 to try MAI (multilingual, incl. Japanese).",
     )
     trans.add_argument(
         "--transcription-language",
-        default=os.environ.get("AZURE_VOICELIVE_TRANSCRIPTION_LANGUAGE", "en"),
-        help="Transcription language hint (BCP-47/ISO-639-1).",
+        default=os.environ.get("AZURE_VOICELIVE_TRANSCRIPTION_LANGUAGE", "auto"),
+        help="Transcription language hint (BCP-47/ISO-639-1, e.g. ja, en). "
+        "Use 'auto' (default) for multilingual auto-detection.",
     )
     trans.add_argument(
         "--phrase",

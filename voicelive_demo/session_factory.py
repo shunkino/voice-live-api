@@ -103,11 +103,15 @@ def build_transcription(
 ) -> AudioInputTranscriptionOptions:
     """Build the input-audio transcription options.
 
+    A language of ``None`` / ``"auto"`` is treated as multilingual
+    auto-detection (no locale hint sent), which is what the MAI-Transcribe
+    models expect for non-English speech such as Japanese.
+
     Phrase lists are only honoured by ``azure-speech``; they're dropped for
     other models (including ``mai-transcribe-1``) so the comparison stays fair.
     """
     kwargs: dict = {"model": model}
-    if language:
+    if language and language.lower() != "auto":
         kwargs["language"] = language
     if phrase_list and model == "azure-speech":
         kwargs["phrase_list"] = list(phrase_list)
@@ -148,7 +152,11 @@ def build_avatar(spec: AvatarSpec) -> Optional[AvatarConfig]:
 
 def build_turn_detection(language: Optional[str]) -> AzureSemanticVadMultilingual:
     """Multilingual semantic VAD with barge-in, biased to the active language."""
-    langs = [language.split("-")[0]] if language else None
+    langs = (
+        [language.split("-")[0]]
+        if language and language.lower() != "auto"
+        else None
+    )
     return AzureSemanticVadMultilingual(
         threshold=0.5,
         prefix_padding_ms=300,
