@@ -1,8 +1,12 @@
 azure-ai-projects>=2.0.0b3
 openai
 azure-ai-voicelive>=1.2.0b4
+aiohttp
 pyaudio
 pyyaml
 python-dotenv
 azure-identity
 azure-ai-evaluation>=1.0.0
+# Web front-end (avatar / browser mode)
+fastapi
+uvicorn[standard]

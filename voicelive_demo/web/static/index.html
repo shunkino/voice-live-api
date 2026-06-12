@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Live Experiments</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🎙️ Voice Live Experiments</h1>
+      <p id="summary" class="summary">Loading configuration…</p>
+    </header>
+
+    <main>
+      <section class="stage">
+        <div class="avatar-wrap">
+          <video id="avatar" autoplay playsinline></video>
+          <div id="avatarPlaceholder" class="placeholder">
+            <span class="dot" id="stateDot"></span>
+            <p id="placeholderText">Avatar is off — audio only.</p>
+          </div>
+          <span id="stateBadge" class="state-badge idle">idle</span>
+        </div>
+
+        <div class="controls">
+          <button id="startBtn" class="primary">Start conversation</button>
+          <button id="stopBtn" class="ghost" disabled>Stop</button>
+          <span id="status" class="status">disconnected</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Transcript</h2>
+        <p class="hint">
+          User transcription model:
+          <code id="transModel">—</code>
+        </p>
+        <div id="transcript" class="transcript"></div>
+      </section>
+    </main>
+
+    <!-- Hidden audio sink for avatar-off playback diagnostics -->
+    <audio id="avatarAudio" autoplay></audio>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
