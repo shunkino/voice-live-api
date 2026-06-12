@@ -149,6 +149,11 @@ async function handleServerMessage(msg) {
     case "speech_started":
       if (playback) playback.flush(); // barge-in
       if (animScheduler) animScheduler.reset(); // face back to neutral
+      // Anchor the user's bubble at speech start. Input-audio transcription
+      // completes asynchronously and often arrives only after the assistant
+      // has already begun replying; pre-creating the bubble here keeps the
+      // turn order correct (user before assistant).
+      ensureInterim("user", appConfig.transcriptionModel);
       break;
 
     case "animation_started":
@@ -280,20 +285,31 @@ function waitForIceGathering(peer) {
 // ---------------------------------------------------------------------------
 // Transcript UI
 // ---------------------------------------------------------------------------
-function appendInterim(role, delta, model) {
-  if (!delta) return;
+function ensureInterim(role, model) {
   if (!interim[role]) {
     interim[role] = addBubble(role, "", model, true);
   }
+  return interim[role];
+}
+
+function appendInterim(role, delta, model) {
+  if (!delta) return;
+  ensureInterim(role, model);
   interim[role].textNode.textContent += delta;
   els.transcript.scrollTop = els.transcript.scrollHeight;
 }
 
 function finalizeTranscript(role, text, model) {
   if (interim[role]) {
-    interim[role].bubble.classList.remove("interim");
-    if (text) interim[role].textNode.textContent = text;
+    const node = interim[role];
     interim[role] = null;
+    if (text) node.textNode.textContent = text;
+    // Drop a placeholder bubble that never received any transcription.
+    if (!node.textNode.textContent) {
+      node.bubble.remove();
+      return;
+    }
+    node.bubble.classList.remove("interim");
   } else if (text) {
     addBubble(role, text, model);
   }
