@@ -16,7 +16,7 @@ sys.path.insert(0, ROOT_DIR)
 
 from voicelive_demo.config import ExperimentConfig
 from voicelive_demo.web import server as server_mod
-from voicelive_demo.web.server import VoiceLiveBridge
+from voicelive_demo.web.server import VoiceLiveBridge, create_app
 
 
 class _Resource:
@@ -93,3 +93,18 @@ async def _run_stop_case():
         assert conn.closed is True
     finally:
         server_mod.connect = orig
+
+
+def test_websocket_route_does_not_require_fake_websocket_param():
+    """Guard against the FastAPI import-scope bug that caused /ws 403s.
+
+    With ``from __future__ import annotations`` active, importing ``WebSocket``
+    inside ``create_app`` left FastAPI unable to resolve the ``websocket``
+    annotation, so it treated it as an extra required query param and rejected
+    the handshake with 403. The route's dependant must expose no such params.
+    """
+    app = create_app(ExperimentConfig(), lambda: object())
+    ws_route = next(r for r in app.routes if getattr(r, "path", None) == "/ws")
+    dependant = ws_route.dependant
+    assert dependant.query_params == []
+    assert dependant.body_params == []

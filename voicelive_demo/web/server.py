@@ -37,6 +37,9 @@ from azure.ai.voicelive.models import (
 )
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials_async import AsyncTokenCredential
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from ..config import ExperimentConfig
 from ..session_factory import build_session
@@ -56,10 +59,6 @@ def create_app(
     :param credential_factory: zero-arg callable returning a fresh async
         credential (or :class:`AzureKeyCredential`) per browser session.
     """
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-    from fastapi.responses import HTMLResponse, JSONResponse
-    from fastapi.staticfiles import StaticFiles
-
     app = FastAPI(title="Voice Live Experiments")
 
     @app.get("/", response_class=HTMLResponse)
