@@ -41,3 +41,12 @@ infra/main.json
 
 # PyAudio build artifacts
 portaudio/
+# Squad: ignore runtime state (logs, inbox, sessions)
+.squad/orchestration-log/
+.squad/log/
+.squad/decisions/inbox/
+.squad/sessions/
+.squad/.scratch/
+.squad/.cache/
+# Squad: SubSquad activation file (local to this machine)
+.squad-workstream
