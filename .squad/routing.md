@@ -6,12 +6,13 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| {domain 1} | {Name} | {example tasks} |
-| {domain 2} | {Name} | {example tasks} |
-| {domain 3} | {Name} | {example tasks} |
-| Code review | {Name} | Review PRs, check quality, suggest improvements |
-| Testing | {Name} | Write tests, find edge cases, verify fixes |
-| Scope & priorities | {Name} | What to build next, trade-offs, decisions |
+| Architecture & design decisions | Richard | API design, system structure, trade-off calls |
+| Backend API & services | Gilfoyle | Endpoints, auth, performance, infra config |
+| Frontend UI & client-side | Dinesh | Components, WebRTC/audio UI, client integrations |
+| Testing & QA | Big Head | Unit/integration/e2e tests, edge cases, regression |
+| Planning & tracking | Jared | Backlog, milestones, GitHub issue management |
+| Code review | Richard | PRs, quality gates, architectural feedback |
+| Scope & priorities | Richard + Jared | What to build next, trade-offs, prioritization |
 | Session logging | Scribe | Automatic — never needs routing |
 | RAI review | Rai | Content safety, bias checks, credential detection, ethical review |
 

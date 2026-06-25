@@ -1,3 +1,68 @@
 {
-  "agents": {}
+  "agents": {
+    "richard": {
+      "persistent_name": "Richard",
+      "universe": "Silicon Valley",
+      "role": "Lead / Architect",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "gilfoyle": {
+      "persistent_name": "Gilfoyle",
+      "universe": "Silicon Valley",
+      "role": "Backend Dev",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "dinesh": {
+      "persistent_name": "Dinesh",
+      "universe": "Silicon Valley",
+      "role": "Frontend Dev",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "bighead": {
+      "persistent_name": "Big Head",
+      "universe": "Silicon Valley",
+      "role": "Tester / QA",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "jared": {
+      "persistent_name": "Jared",
+      "universe": "Silicon Valley",
+      "role": "PM / Operations",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "scribe": {
+      "persistent_name": "Scribe",
+      "universe": "exempt",
+      "role": "Session Logger",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "ralph": {
+      "persistent_name": "Ralph",
+      "universe": "exempt",
+      "role": "Work Monitor",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "rai": {
+      "persistent_name": "Rai",
+      "universe": "exempt",
+      "role": "RAI Reviewer",
+      "created_at": "2026-06-25T15:49:10+09:00",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
 }

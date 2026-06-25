@@ -1,4 +1,22 @@
 {
-  "universe_usage_history": [],
-  "assignment_cast_snapshots": {}
+  "universe_usage_history": [
+    {
+      "universe": "Silicon Valley",
+      "used_at": "2026-06-25T15:49:10+09:00",
+      "assignment_id": "voice-live-api-2026-06-25"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "voice-live-api-2026-06-25": {
+      "universe": "Silicon Valley",
+      "cast_at": "2026-06-25T15:49:10+09:00",
+      "members": [
+        { "name": "Richard", "role": "Lead / Architect" },
+        { "name": "Gilfoyle", "role": "Backend Dev" },
+        { "name": "Dinesh", "role": "Frontend Dev" },
+        { "name": "Big Head", "role": "Tester / QA" },
+        { "name": "Jared", "role": "PM / Operations" }
+      ]
+    }
+  }
 }
