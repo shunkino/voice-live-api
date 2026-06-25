@@ -91,7 +91,7 @@ MODEL_DEPLOYMENT_NAME=<modelDeploymentName の value>
 
 ## サンプル一覧
 
-| ファイル | 概要 |
+| ファイル / ディレクトリ | 概要 |
 |---|---|
 | `voice-live-quickstart.py` | Voice Live API の基本的な接続・音声対話 |
 | `voice-live-function-call.py` | Function Calling を使った音声対話 |
@@ -99,6 +99,7 @@ MODEL_DEPLOYMENT_NAME=<modelDeploymentName の value>
 | `voice-live-agents-quickstart.py` | Azure AI Agents と Voice Live の連携 |
 | `voice-live-experiments.py` | **カスタム音声 + フェイスアバター + MAI-Transcribe を統合したデモ** |
 | `create_agent_with_voicelive.py` | Voice Live 設定付きエージェントの作成 |
+| [`hosted-agents/weather-forecast/`](hosted-agents/weather-forecast/README.md) | **Foundry ホスト型エージェント – 日本語天気予報サンプル** (`invocations_ws` WebSocket, モック/JMA 対応) |
 
 ## 統合デモ: カスタム音声 + アバター + MAI-Transcribe
 
