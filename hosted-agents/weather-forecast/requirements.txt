@@ -4,9 +4,8 @@ uvicorn[standard]>=0.29.0
 python-dotenv>=1.0.0
 aiohttp>=3.9.0
 
-# Optional: Foundry hosted-agent SDK (preview).
-# Uncomment when deploying to Microsoft Foundry.
-# azure-ai-agentserver-invocations
+# Foundry hosted-agent SDK — required for InvocationAgentServerHost.
+azure-ai-agentserver-invocations
 
 # Optional: Azure AI projects + identity for Foundry deployment.
 # azure-ai-projects>=2.0.0b3

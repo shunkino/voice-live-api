@@ -76,6 +76,11 @@ def create_app(settings: Settings | None = None, store: SessionStore | None = No
     async def health() -> JSONResponse:
         return JSONResponse({"status": "ok", "provider": cfg.weather_provider})
 
+    # Foundry Hosted Agent platform health probe — must return 200 when ready.
+    @app.get("/readiness")
+    async def readiness() -> JSONResponse:
+        return JSONResponse({"status": "ready"})
+
     @app.websocket("/invocations_ws")
     async def invocations_ws(ws: WebSocket) -> None:
         # Reject any query param that looks like a bearer token.

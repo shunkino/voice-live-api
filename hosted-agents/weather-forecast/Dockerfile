@@ -23,7 +23,7 @@ RUN useradd --create-home appuser && chown -R appuser /app
 USER appuser
 
 ENV WEATHER_AGENT_HOST=0.0.0.0
-ENV WEATHER_AGENT_PORT=8080
-EXPOSE 8080
+ENV WEATHER_AGENT_PORT=8088
+EXPOSE 8088
 
-CMD ["uvicorn", "agent.app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python", "-m", "agent.server"]
