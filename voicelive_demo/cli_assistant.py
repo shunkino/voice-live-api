@@ -24,7 +24,7 @@ from azure.core.credentials_async import AsyncTokenCredential
 
 from .audio import AudioProcessor
 from .config import ExperimentConfig
-from .session_factory import build_session
+from .session_factory import agent_connect_kwargs, build_session
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +53,16 @@ class CliVoiceAssistant:
             )
 
         logger.info("Connecting to Voice Live (%s)", self.config.summary())
+        connect_kwargs = {
+            "endpoint": self.config.endpoint,
+            "credential": self.credential,
+        }
+        if self.config.use_agent:
+            connect_kwargs.update(agent_connect_kwargs(self.config))
+        else:
+            connect_kwargs["model"] = self.config.model
         try:
-            async with connect(
-                endpoint=self.config.endpoint,
-                credential=self.credential,
-                model=self.config.model,
-            ) as connection:
+            async with connect(**connect_kwargs) as connection:
                 self.connection = connection
                 self.audio_processor = AudioProcessor(connection)
 

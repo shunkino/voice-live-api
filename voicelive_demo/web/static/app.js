@@ -13,6 +13,7 @@ const TARGET_RATE = 24000; // Voice Live PCM sample rate
 
 const els = {
   summary: document.getElementById("summary"),
+  agentBadge: document.getElementById("agentBadge"),
   transModel: document.getElementById("transModel"),
   startBtn: document.getElementById("startBtn"),
   stopBtn: document.getElementById("stopBtn"),
@@ -58,6 +59,12 @@ async function init() {
   }
   els.summary.textContent = appConfig.summary || "";
   els.transModel.textContent = appConfig.transcriptionModel || "—";
+  const agent = appConfig.agent;
+  if (agent && agent.enabled) {
+    els.agentBadge.textContent =
+      `🤖 Hosted agent: ${agent.name} (project: ${agent.project})`;
+    els.agentBadge.hidden = false;
+  }
   if (appConfig.faceModel) {
     els.placeholderText.textContent = "Local face model — speak to animate it.";
   } else {

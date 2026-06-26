@@ -158,11 +158,39 @@ python voice-live-experiments.py --mode cli --use-token-credential `
   --voice-type custom --voice <カスタム音声名> --voice-endpoint-id <デプロイ GUID>
 ```
 
+### ⑤ Foundry ホスト型エージェントに接続（Web / CLI）
+
+`--model`（素のモデル）の代わりに、Foundry にデプロイした **ホスト型エージェント** へ接続できます。
+Voice Live が音声認識（STT）と音声合成（TTS）を担当し、会話ロジックはホスト型エージェントが処理します
+（例: `hosted-agents/weather-forecast` の天気予報エージェント）。
+
+前提として、エージェントは **Voice Live 互換** である必要があります（`invocations` プロトコルを公開し、
+バージョンメタデータに `voiceLiveCompatible: "true"` を設定。詳細は `hosted-agents/weather-forecast/README.md`）。
+
+```powershell
+az login
+
+# Web UI からホスト型エージェントに接続（ブラウザでマイク対話）
+python voice-live-experiments.py --mode web --use-token-credential `
+  --endpoint https://<account>.services.ai.azure.com `
+  --agent-name weather-forecast-agent --agent-project-name weather-agent-proj
+# → http://127.0.0.1:8000 を開く。ヘッダーに「🤖 Hosted agent: ...」バッジが表示される
+
+# CLI からホスト型エージェントに接続（ターミナルでマイク対話）
+python voice-live-experiments.py --mode cli --use-token-credential `
+  --endpoint https://<account>.services.ai.azure.com `
+  --agent-name weather-forecast-agent --agent-project-name weather-agent-proj
+```
+
+環境変数で指定する場合は `AZURE_VOICELIVE_AGENT_NAME` と `AZURE_VOICELIVE_AGENT_PROJECT` を設定します。
+両方を設定したときのみエージェントモードになり、片方だけの場合は起動時にエラーになります。
+
 主なオプション（`--help` で全件表示）:
 
 | オプション | 説明 |
 |---|---|
 | `--mode {cli,web}` | 実行モード（既定: cli） |
+| `--agent-name` / `--agent-project-name` | Foundry **ホスト型エージェント**に接続（`--model` の代わり）。両方指定が必要 |
 | `--voice-type {standard,personal,custom,avatar-voice-sync}` | 音声タイプ |
 | `--voice` / `--voice-base-model` / `--voice-endpoint-id` | 音声名 / パーソナル基盤モデル / カスタム音声 GUID |
 | `--transcription-model` | `azure-speech` / `mai-transcribe-1` / `whisper-1` / `gpt-4o-transcribe` ほか |

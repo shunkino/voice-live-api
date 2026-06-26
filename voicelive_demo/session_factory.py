@@ -166,6 +166,35 @@ def build_turn_detection(language: Optional[str]) -> AzureSemanticVadMultilingua
     )
 
 
+def agent_connect_kwargs(cfg: ExperimentConfig) -> dict:
+    """Return the ``connect()`` kwargs that route to a hosted agent.
+
+    The Voice Live SDK changed how a hosted agent is selected:
+
+    * newer SDKs (>= 1.3.0b1) take top-level ``agent_name`` / ``project_name``;
+    * older SDKs (1.2.x) take an ``agent_config`` TypedDict.
+
+    Detect which form the installed ``connect`` accepts so the same code works
+    against either SDK.
+    """
+    import inspect
+
+    from azure.ai.voicelive.aio import connect as _connect
+
+    params = inspect.signature(_connect).parameters
+    if "agent_name" in params:
+        return {
+            "agent_name": cfg.agent_name,
+            "project_name": cfg.agent_project_name,
+        }
+    return {
+        "agent_config": {
+            "agent_name": cfg.agent_name,
+            "project_name": cfg.agent_project_name,
+        }
+    }
+
+
 def build_session(cfg: ExperimentConfig) -> RequestSession:
     """Assemble the combined :class:`RequestSession` for all three features."""
     cfg.validate()
@@ -183,7 +212,7 @@ def build_session(cfg: ExperimentConfig) -> RequestSession:
 
     session = RequestSession(
         modalities=[Modality.TEXT, Modality.AUDIO],
-        instructions=cfg.instructions,
+        instructions=None if cfg.use_agent else cfg.instructions,
         voice=build_voice(cfg.voice),
         input_audio_format=InputAudioFormat.PCM16,
         output_audio_format=OutputAudioFormat.PCM16,

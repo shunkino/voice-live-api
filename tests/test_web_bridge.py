@@ -108,3 +108,69 @@ def test_websocket_route_does_not_require_fake_websocket_param():
     dependant = ws_route.dependant
     assert dependant.query_params == []
     assert dependant.body_params == []
+
+
+def test_agent_mode_connects_with_agent_config():
+    """In hosted-agent mode the bridge connects via agent_config, not model."""
+    asyncio.run(_run_agent_mode_case())
+
+
+async def _run_agent_mode_case():
+    conn = _FakeConnection()
+    captured = {}
+    orig = server_mod.connect
+
+    def _fake_connect(**kw):
+        captured.update(kw)
+        return _FakeConnectCtx(conn)
+
+    server_mod.connect = _fake_connect
+    try:
+        cfg = ExperimentConfig(
+            endpoint="https://acct.services.ai.azure.com",
+            agent_name="weather-forecast-agent",
+            agent_project_name="weather-agent-proj",
+        )
+        assert cfg.use_agent is True
+        ws = _FakeWebSocket(['{"type": "stop"}'])
+        bridge = VoiceLiveBridge(cfg, lambda: object(), ws)
+        await asyncio.wait_for(bridge.run(), timeout=5)
+    finally:
+        server_mod.connect = orig
+
+    assert "model" not in captured
+    expected = server_mod.agent_connect_kwargs(cfg)
+    for key, value in expected.items():
+        assert captured.get(key) == value
+    # Either form must carry the agent + project identifiers.
+    flat = {**captured, **captured.get("agent_config", {})}
+    assert flat.get("agent_name") == "weather-forecast-agent"
+    assert flat.get("project_name") == "weather-agent-proj"
+
+
+def test_model_mode_connects_with_model():
+    """Without agent config the bridge connects with a bare model."""
+    asyncio.run(_run_model_mode_case())
+
+
+async def _run_model_mode_case():
+    conn = _FakeConnection()
+    captured = {}
+    orig = server_mod.connect
+
+    def _fake_connect(**kw):
+        captured.update(kw)
+        return _FakeConnectCtx(conn)
+
+    server_mod.connect = _fake_connect
+    try:
+        cfg = ExperimentConfig(model="gpt-realtime")
+        assert cfg.use_agent is False
+        ws = _FakeWebSocket(['{"type": "stop"}'])
+        bridge = VoiceLiveBridge(cfg, lambda: object(), ws)
+        await asyncio.wait_for(bridge.run(), timeout=5)
+    finally:
+        server_mod.connect = orig
+
+    assert "agent_config" not in captured
+    assert captured.get("model") == "gpt-realtime"

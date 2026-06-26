@@ -42,7 +42,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..config import ExperimentConfig
-from ..session_factory import build_session
+from ..session_factory import agent_connect_kwargs, build_session
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,11 @@ def create_app(
                 "faceModel": config.local_face_model,
                 "viseme": config.enable_viseme,
                 "blendshapes": config.enable_blendshapes,
+                "agent": {
+                    "enabled": config.use_agent,
+                    "name": config.agent_name,
+                    "project": config.agent_project_name,
+                },
                 "summary": config.summary(),
             }
         )
@@ -113,11 +118,17 @@ class VoiceLiveBridge:
 
     async def run(self) -> None:
         self._credential = self.credential_factory()
-        async with connect(
-            endpoint=self.config.endpoint,
-            credential=self._credential,
-            model=self.config.model,
-        ) as connection:
+        connect_kwargs = {
+            "endpoint": self.config.endpoint,
+            "credential": self._credential,
+        }
+        if self.config.use_agent:
+            # Connect to a Foundry hosted agent — it owns the conversation
+            # logic; Voice Live only handles STT/TTS.
+            connect_kwargs.update(agent_connect_kwargs(self.config))
+        else:
+            connect_kwargs["model"] = self.config.model
+        async with connect(**connect_kwargs) as connection:
             self.connection = connection
             await connection.session.update(session=build_session(self.config))
             logger.info("Voice Live session opened (%s)", self.config.summary())

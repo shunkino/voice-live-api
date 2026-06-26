@@ -131,6 +131,13 @@ class ExperimentConfig:
     api_key: Optional[str] = None
     use_token_credential: bool = False
 
+    # --- Hosted agent (optional) ---
+    # When both are set, Voice Live connects to a Foundry *hosted agent*
+    # (agent_config) instead of a bare model. The agent then owns the
+    # conversation logic; Voice Live only does STT/TTS.
+    agent_name: Optional[str] = None
+    agent_project_name: Optional[str] = None
+
     # --- Assistant behaviour ---
     instructions: str = (
         "You are a helpful AI assistant. Respond naturally and conversationally. "
@@ -166,9 +173,19 @@ class ExperimentConfig:
             self.enable_viseme or self.enable_blendshapes
         )
 
+    @property
+    def use_agent(self) -> bool:
+        """True when a Foundry hosted agent should drive the conversation."""
+        return bool(self.agent_name and self.agent_project_name)
+
     def validate(self) -> None:
         self.voice.validate()
         self.avatar.validate()
+        if bool(self.agent_name) != bool(self.agent_project_name):
+            raise ValueError(
+                "Hosted agent mode requires BOTH --agent-name and "
+                "--agent-project-name (or neither)."
+            )
         if self.transcription_model not in TRANSCRIPTION_MODELS:
             raise ValueError(
                 f"transcription_model must be one of {TRANSCRIPTION_MODELS}, "
@@ -219,8 +236,13 @@ class ExperimentConfig:
             face_desc = "+".join(anim)
         else:
             face_desc = "off"
+        target = (
+            f"agent '{self.agent_name}' (project '{self.agent_project_name}')"
+            if self.use_agent
+            else f"model={self.model}"
+        )
         return (
-            f"model={self.model} | voice={voice_desc} | "
+            f"{target} | voice={voice_desc} | "
             f"transcription={self.transcription_model} | avatar={avatar_desc} | "
             f"face={face_desc}"
         )
@@ -244,6 +266,19 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--model",
         default=os.environ.get("AZURE_VOICELIVE_MODEL", "gpt-realtime"),
         help="Chat model / agent to use (e.g. gpt-realtime, gpt-4.1).",
+    )
+    conn.add_argument(
+        "--agent-name",
+        default=os.environ.get("AZURE_VOICELIVE_AGENT_NAME"),
+        help="Foundry hosted agent name. When set together with "
+        "--agent-project-name, Voice Live connects to the hosted agent "
+        "instead of --model.",
+    )
+    conn.add_argument(
+        "--agent-project-name",
+        default=os.environ.get("AZURE_VOICELIVE_AGENT_PROJECT"),
+        help="Foundry project that contains the hosted agent (required with "
+        "--agent-name).",
     )
     conn.add_argument(
         "--api-key",
@@ -415,6 +450,8 @@ def config_from_args(args: argparse.Namespace) -> ExperimentConfig:
     cfg = ExperimentConfig(
         endpoint=args.endpoint,
         model=args.model,
+        agent_name=args.agent_name,
+        agent_project_name=args.agent_project_name,
         api_key=args.api_key,
         use_token_credential=args.use_token_credential,
         instructions=args.instructions,

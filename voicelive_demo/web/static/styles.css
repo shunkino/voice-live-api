@@ -38,6 +38,18 @@ h1 {
   margin: 6px 0 0;
 }
 
+.agent-badge {
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0b3d2e;
+  background: #d1f5e6;
+  border: 1px solid #8fe0c2;
+  border-radius: 999px;
+}
+
 main {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
