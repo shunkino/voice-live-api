@@ -16,8 +16,22 @@ Azure AI Voice Live SDK を使用した音声対話エージェントのサン�
 python -m venv .venv
 source .venv/bin/activate
 
-# 依存パッケージのインストール
+# 依存パッケージのインストール（Web モード / ブラウザ対話はこれだけで動作）
 pip install -r requirements.txt
+```
+
+CLI モード（`--mode cli`）やルート直下のクイックスタートはマイク/スピーカーに
+**PyAudio** を使います。PyAudio はネイティブの **PortAudio** ライブラリを必要とするため、
+先にシステムへ PortAudio を入れてから `requirements-audio.txt` をインストールしてください
+（Web モードでは不要です。ブラウザが音声を扱います）。
+
+```bash
+# Linux
+sudo apt-get install -y portaudio19-dev libasound2-dev
+# macOS
+# brew install portaudio
+
+pip install -r requirements-audio.txt
 ```
 
 `.env` ファイルをプロジェクトルートに作成し、以下の環境変数を設定してください。

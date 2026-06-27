@@ -2,7 +2,6 @@ azure-ai-projects>=2.0.0b3
 openai
 azure-ai-voicelive>=1.2.0b4
 aiohttp
-pyaudio
 pyyaml
 python-dotenv
 azure-identity
@@ -10,3 +9,12 @@ azure-ai-evaluation>=1.0.0
 # Web front-end (avatar / browser mode)
 fastapi
 uvicorn[standard]
+
+# Microphone/speaker for CLI mode (--mode cli) and the root quickstart
+# scripts is provided by PyAudio, which needs the native PortAudio library.
+# It is intentionally NOT listed here so `pip install -r requirements.txt`
+# works for web mode (the browser captures audio) without system libraries.
+# For CLI/mic mode install PortAudio, then requirements-audio.txt:
+#   Linux: sudo apt-get install -y portaudio19-dev libasound2-dev
+#   macOS: brew install portaudio
+#   then:  pip install -r requirements-audio.txt

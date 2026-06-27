@@ -1,0 +1,8 @@
+# Audio dependencies for CLI/microphone mode (--mode cli) and the root
+# quickstart scripts. PyAudio builds against the native PortAudio library,
+# so install that first:
+#   Linux: sudo apt-get install -y portaudio19-dev libasound2-dev
+#   macOS: brew install portaudio
+#   Windows: PortAudio ships with the PyAudio wheel (no extra step)
+-r requirements.txt
+pyaudio
