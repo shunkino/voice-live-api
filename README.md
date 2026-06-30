@@ -199,6 +199,9 @@ python voice-live-experiments.py --mode cli --use-token-credential `
 環境変数で指定する場合は `AZURE_VOICELIVE_AGENT_NAME` と `AZURE_VOICELIVE_AGENT_PROJECT` を設定します。
 両方を設定したときのみエージェントモードになり、片方だけの場合は起動時にエラーになります。
 
+> アーキテクチャ（Voice Live API とホスト型エージェント API の連携、音声/モデルの決まり方）は
+> [`docs/hosted-voice-agent-architecture.md`](docs/hosted-voice-agent-architecture.md) を参照してください。
+
 主なオプション（`--help` で全件表示）:
 
 | オプション | 説明 |
@@ -323,6 +326,7 @@ python evaluation/run_eval.py \
 │   ├── log_harvester.py
 │   └── run_batch_eval.py
 ├── docs/
+│   ├── hosted-voice-agent-architecture.md  # ホスト型音声エージェントのアーキテクチャ
 │   └── scenario-control-design.md    # シナリオ制御設計書
 └── tests/
     ├── test_engine.py
