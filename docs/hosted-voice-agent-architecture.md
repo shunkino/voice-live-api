@@ -248,6 +248,10 @@ Foundry チャットモデル（Responses API, LLM_MODEL_DEPLOYMENT）
   決定的な `template`＋`mock` パスへ自動的に切り替わります（音声対話が止まらない）。
 - **フォローアップ**: 直近の location/day を `session_state` に保持し、instructions の文脈として渡すため、
   「明日は？」のように地名を省いた追質問にも対応（音声トランスクリプトは保存しません）。
+- **待ち時間の無音回避**: ツール呼び出しには数秒かかります。`invoke_handler` は応答を SSE でストリーミングし、
+  天気質問が `TOOL_WAIT_SECONDS`（既定 1.2 秒）以内に終わらない場合、先に短いつなぎ言葉
+  （「少々お待ちください。」/ "One moment, please."）を `output_audio_transcription.delta` で送って Voice Live に
+  即座に読み上げさせ、その後に本回答を続けます（`agent/server.py: _stream_invocation`）。天気以外の即答には付きません。
 
 ---
 
