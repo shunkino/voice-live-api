@@ -31,6 +31,36 @@ import signal
 import sys
 from datetime import datetime
 
+
+def _check_dependencies() -> None:
+    """Fail fast with actionable guidance if core deps aren't importable.
+
+    A bare ``python voice-live-experiments.py`` run often picks up a global
+    interpreter (or an unactivated venv) that lacks the project dependencies,
+    producing a confusing ``ModuleNotFoundError`` deep in the call stack. Catch
+    that here and point the user at the fix instead.
+    """
+    missing = []
+    for mod in ("dotenv", "azure.core", "azure.ai.voicelive"):
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(mod)
+    if not missing:
+        return
+    print("❌ Required dependencies are not installed for this interpreter:")
+    print(f"   {sys.executable}")
+    print(f"   not importable: {', '.join(missing)}")
+    print()
+    print("This usually means the virtual environment isn't activated. Try one of:")
+    print("   source .venv/bin/activate        # then re-run this command")
+    print("   uv run python voice-live-experiments.py ...   # if you use uv")
+    print("   pip install -r requirements.txt  # if the venv has no deps yet")
+    sys.exit(1)
+
+
+_check_dependencies()
+
 from dotenv import load_dotenv
 
 # Make emoji-bearing output safe on legacy Windows consoles (e.g. cp932).
