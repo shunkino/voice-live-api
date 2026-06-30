@@ -239,3 +239,25 @@ class TestLLMResponder:
         responder = LLMResponder(project_endpoint="", model_deployment="m", provider="mock")
         session = SessionStore().get_or_create("s4")
         assert asyncio.run(responder.respond("今日の東京の天気は？", session)) is None
+
+    def test_weather_request_forces_get_weather_tool(self):
+        """A weather question must force tool_choice=get_weather (no hallucination)."""
+        fake = _FakeResponses([
+            _FakeResponse(output=[_FakeFunctionCall("c1", "get_weather",
+                          json.dumps({"location": "東京", "day": "今日"}))]),
+            _FakeResponse(output=[_FakeTextItem()], output_text="東京の今日は晴れです。"),
+        ])
+        responder = _responder_with(fake, provider="mock")
+        asyncio.run(responder.respond("今日の東京の天気は？", SessionStore().get_or_create("f1")))
+        # First model call forces the tool; the follow-up call uses auto.
+        assert fake.calls[0]["tool_choice"] == {"type": "function", "name": "get_weather"}
+        assert fake.calls[1]["tool_choice"] == "auto"
+
+    def test_offtopic_uses_auto_tool_choice(self):
+        """Non-weather turns stay auto so the model can decline without a tool."""
+        fake = _FakeResponses([
+            _FakeResponse(output=[_FakeTextItem()], output_text="天気のことならお答えできます。"),
+        ])
+        responder = _responder_with(fake, provider="mock")
+        asyncio.run(responder.respond("おすすめのレストランは？", SessionStore().get_or_create("f2")))
+        assert fake.calls[0]["tool_choice"] == "auto"

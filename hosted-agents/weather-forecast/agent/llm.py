@@ -23,6 +23,7 @@ from .weather import (
     WeatherRequest,
     detect_language,
     get_forecast,
+    is_weather_request,
     _normalise_city,
     _normalise_day,
 )
@@ -161,18 +162,30 @@ class LLMResponder:
         instructions = self._instructions(session, language)
         input_items: list[dict[str, Any]] = [{"role": "user", "content": text}]
 
+        # Weather questions MUST be grounded on the tool. Forcing tool_choice on
+        # the first turn stops a small model from answering weather questions
+        # from its own (hallucinated) knowledge. Non-weather turns stay "auto"
+        # so the model can decline without calling the tool.
+        force_tool = is_weather_request(text)
+
         last_location: Optional[str] = None
         last_day: Optional[str] = None
         last_demo = self._provider != "live"
+        tool_used = False
 
         try:
             for _ in range(_MAX_TOOL_ROUNDS):
+                if force_tool and not tool_used:
+                    tool_choice: Any = {"type": "function", "name": "get_weather"}
+                else:
+                    tool_choice = "auto"
                 response = await asyncio.to_thread(
                     client.create,
                     model=self._model,
                     instructions=instructions,
                     input=input_items,
                     tools=[_GET_WEATHER_TOOL],
+                    tool_choice=tool_choice,
                     store=False,
                 )
 
@@ -191,6 +204,7 @@ class LLMResponder:
                     ).to_json()
 
                 for call in tool_calls:
+                    tool_used = True
                     try:
                         args = json.loads(call.arguments or "{}")
                     except json.JSONDecodeError:
@@ -199,6 +213,13 @@ class LLMResponder:
                     last_location = result.get("location") or last_location
                     last_day = result.get("day") or last_day
                     last_demo = bool(result.get("is_demo_data", last_demo))
+                    logger.info(
+                        "get_weather tool: location=%s day=%s -> source=%s temp=%s",
+                        result.get("location"),
+                        result.get("day"),
+                        result.get("source"),
+                        result.get("temperature_c"),
+                    )
 
                     input_items.append(
                         {

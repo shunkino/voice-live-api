@@ -183,6 +183,12 @@ AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/
 ライブ予報を取得してモデルに返し、モデルが自然な話し言葉（日本語/英語）で読み上げ用テキストを生成します。
 `mock` データ利用時のみ `demo_data: true` になります。
 
+> **グラウンディングの保証**: 天気質問では `tool_choice` で `get_weather` の呼び出しを**強制**します。
+> これにより小さめのモデルが（ツールを使わず）自分の知識で天気を作話するのを防ぎ、必ずライブデータに基づいて
+> 応答します。天気以外の質問は `auto` のままなので、ツールを呼ばずに丁寧にお断りできます。
+> ツール実行は `AppTraces`（`get_weather tool: … -> source=open-meteo|demo`）に、Open-Meteo への
+> HTTP 呼び出しは `AppDependencies`（`GET /v1/forecast` 等）に記録されます（aiohttp 計装）。
+
 ### ツール実行中の「お待ちください」（無音回避）
 
 LLM のツール呼び出しには数秒の待ち時間が生じます。`invoke_handler` は応答を **SSE でストリーミング**するため、

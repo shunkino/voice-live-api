@@ -11,6 +11,10 @@ azure-ai-agentserver-invocations
 azure-ai-projects>=2.0.0b3
 azure-identity
 
+# Trace outbound weather-API (aiohttp) calls as dependency spans. Pinned to the
+# OpenTelemetry instrumentation series used by azure-ai-agentserver-core.
+opentelemetry-instrumentation-aiohttp-client==0.61b0
+
 # Optional: Voice Live integration patterns.
 # azure-ai-voicelive>=1.2.0b4
 

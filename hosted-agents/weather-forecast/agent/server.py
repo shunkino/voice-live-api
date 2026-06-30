@@ -66,6 +66,12 @@ if missing:
 
 app = InvocationAgentServerHost()
 
+# Trace outbound weather-API (aiohttp) calls in Application Insights. The core
+# host has set up the tracer provider above; this adds aiohttp dependency spans.
+from ._telemetry import instrument_aiohttp  # noqa: E402
+
+instrument_aiohttp()
+
 
 def _extract_user_text(body: bytes) -> str:
     """Extract the user's text from a Voice Live / Invocations request body.
