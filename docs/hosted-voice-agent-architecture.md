@@ -244,6 +244,10 @@ Foundry チャットモデル（Responses API, LLM_MODEL_DEPLOYMENT）
 
 - **バイリンガル（日本語優先）**: 入力言語を自動判定（`detect_language`）し、同じ言語で応答。
   天気予報・聞き返し・天気以外のお断りを日本語/英語で出し分け。`template` モードも同様にバイリンガル。
+- **グラウンディングの保証**: 天気質問では `tool_choice` で `get_weather` の呼び出しを**強制**するため、
+  モデルが自分の知識で作話せず、必ずツール（ライブデータ）に基づいて答えます。ツール実行は `AppTraces`
+  （`get_weather tool: … -> source=open-meteo|demo`）、Open-Meteo への HTTP は `AppDependencies`
+  （`GET /v1/forecast` 等、aiohttp 計装）に記録され、グラウンディングが可観測です。
 - **フォールバック**: 設定不足・モデル/ツール失敗時は `respond()` が `None` を返し、
   決定的な `template`＋`mock` パスへ自動的に切り替わります（音声対話が止まらない）。
 - **フォローアップ**: 直近の location/day を `session_state` に保持し、instructions の文脈として渡すため、
