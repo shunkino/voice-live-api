@@ -13,6 +13,7 @@ Foundry deployment uses this file (InvocationAgentServerHost, port 8088).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -40,11 +41,13 @@ from .session_state import SessionStore, default_store
 from .weather import (
     ForecastResponse,
     WeatherRequest,
+    detect_language,
     get_forecast,
     is_weather_request,
     is_location_only_reply,
     parse_location_reply,
     parse_weather_request,
+    wait_filler_text,
 )
 from .app import _handle_weather_request  # reuse the shared logic
 from .llm import maybe_build_responder
@@ -88,6 +91,30 @@ def _extract_user_text(body: bytes) -> str:
     return ""
 
 
+def _sse_delta(text: str) -> str:
+    """SSE line: incremental spoken text that Voice Live synthesizes immediately."""
+    return (
+        "data: "
+        + json.dumps(
+            {"type": "output_audio_transcription.delta", "delta": text},
+            ensure_ascii=False,
+        )
+        + "\n\n"
+    )
+
+
+def _sse_done(text: str) -> str:
+    """SSE line: final transcript for the turn."""
+    return (
+        "data: "
+        + json.dumps(
+            {"type": "output_audio_transcription.done", "text": text},
+            ensure_ascii=False,
+        )
+        + "\n\n"
+    )
+
+
 @app.invoke_handler
 async def handle_invoke(request: Request):
     """Voice Live-compatible Invocations (HTTP/SSE) handler.
@@ -115,39 +142,69 @@ async def handle_invoke(request: Request):
     session_id = getattr(request.state, "session_id", "") or str(uuid.uuid4())
     session = sessions.get_or_create(session_id)
 
-    response_json = await _handle_weather_request(
-        user_text, session, cfg.weather_provider, responder
+    language = detect_language(user_text)
+    # Only weather-style turns invoke the (slower) tool path, so we reserve the
+    # "please wait" filler for those; quick off-topic declines stay snappy.
+    eligible_for_filler = cfg.tool_wait_seconds > 0 and is_weather_request(user_text)
+
+    return StreamingResponse(
+        _stream_invocation(
+            user_text,
+            session,
+            provider=cfg.weather_provider,
+            responder=responder,
+            language=language,
+            wait_seconds=cfg.tool_wait_seconds if eligible_for_filler else 0.0,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+async def _stream_invocation(
+    user_text: str,
+    session: Any,
+    *,
+    provider: str,
+    responder: Any,
+    language: str,
+    wait_seconds: float,
+):
+    """Yield SSE lines for one invocation, speaking a filler if the turn is slow.
+
+    The (possibly slow) LLM + tool work runs concurrently with streaming. If it
+    hasn't finished within *wait_seconds*, a short bilingual "please wait" filler
+    is spoken first so the user isn't left in silence; the real answer follows.
+    Set *wait_seconds* <= 0 to disable the filler.
+    """
+    work = asyncio.ensure_future(
+        _handle_weather_request(user_text, session, provider, responder)
+    )
+
+    filler = ""
+    if wait_seconds > 0:
+        done, _pending = await asyncio.wait({work}, timeout=wait_seconds)
+        if work not in done:
+            filler = wait_filler_text(language)
+            yield _sse_delta(filler)
+
+    try:
+        response_json = await work
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Invocation failed: %s", exc)
+        response_json = ErrorMessage(message="Internal server error").to_json()
+
     try:
         spoken = json.loads(response_json).get("text", "")
     except (json.JSONDecodeError, AttributeError):
         spoken = ""
 
-    async def event_generator():
-        if spoken:
-            yield (
-                "data: "
-                + json.dumps(
-                    {"type": "output_audio_transcription.delta", "delta": spoken},
-                    ensure_ascii=False,
-                )
-                + "\n\n"
-            )
-        yield (
-            "data: "
-            + json.dumps(
-                {"type": "output_audio_transcription.done", "text": spoken},
-                ensure_ascii=False,
-            )
-            + "\n\n"
-        )
-        yield "data: " + json.dumps({"type": "done"}) + "\n\n"
+    if spoken:
+        yield _sse_delta(spoken)
 
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    full_text = f"{filler} {spoken}".strip() if filler else spoken
+    yield _sse_done(full_text)
+    yield "data: " + json.dumps({"type": "done"}) + "\n\n"
 
 
 @app.ws_handler

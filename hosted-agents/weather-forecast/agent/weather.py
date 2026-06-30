@@ -103,6 +103,11 @@ def detect_language(text: str) -> str:
         return "en"
     return "ja"
 
+
+def wait_filler_text(language: str) -> str:
+    """A short, voice-friendly 'please wait' phrase for slow tool calls."""
+    return "One moment, please." if language == "en" else "少々お待ちください。"
+
 # ── Weather keyword detection ─────────────────────────────────────────────────
 
 _WEATHER_KEYWORDS_JP = frozenset({

@@ -39,6 +39,9 @@ class Settings:
     project_endpoint: str = ""
     # Chat model deployment name for the LLM responder (not the voice model).
     llm_model_deployment: str = "gpt-4.1-mini"
+    # Seconds to wait before speaking a short "please wait" filler while a slow
+    # turn (e.g. an LLM tool call) is still running. <= 0 disables the filler.
+    tool_wait_seconds: float = 1.2
 
     # --- Foundry / Voice Live ---
     project_name: str = ""
@@ -95,6 +98,7 @@ class Settings:
             llm_model_deployment=os.environ.get(
                 "LLM_MODEL_DEPLOYMENT", "gpt-4.1-mini"
             ),
+            tool_wait_seconds=_parse_float_env("TOOL_WAIT_SECONDS", 1.2),
             host=os.environ.get("WEATHER_AGENT_HOST", "127.0.0.1"),
             port=port,
             project_name=os.environ.get("PROJECT_NAME", ""),
@@ -147,3 +151,14 @@ class Settings:
             f"Foundry deployment requires the following environment variables: {names}. "
             "Set them in your .env file or shell before starting the hosted agent."
         )
+
+
+def _parse_float_env(name: str, default: float) -> float:
+    """Parse a float environment variable, falling back to *default* on error."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default

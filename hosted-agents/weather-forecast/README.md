@@ -129,6 +129,7 @@ python client/text_client.py --text "今日の東京の天気は？" --backend w
 | `WEATHER_PROVIDER` | No | `mock` | `mock`（デモデータ）/ `live`（Open-Meteo ライブデータ）/ `jma`（スケルトン） |
 | `RESPONSE_MODE` | No | `template` | `template`（ルールベース）/ `llm`（モデル + get_weather ツール） |
 | `LLM_MODEL_DEPLOYMENT` | No | `gpt-4.1-mini` | `RESPONSE_MODE=llm` で使うチャットモデルのデプロイ名 |
+| `TOOL_WAIT_SECONDS` | No | `1.2` | ツール実行などで応答が遅いとき「少々お待ちください」と先に話すまでの秒数（`0` 以下で無効） |
 | `AZURE_AI_PROJECT_ENDPOINT` | No | なし | ローカルで LLM を使う際の Foundry プロジェクトエンドポイント（ホスト環境では `FOUNDRY_PROJECT_ENDPOINT` を自動注入） |
 | `WEATHER_AGENT_HOST` | No | `127.0.0.1` | ローカルサーバーホスト |
 | `WEATHER_AGENT_PORT` | No | `8080` | ローカルサーバーポート |
@@ -181,6 +182,14 @@ AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/
 この構成では、モデルが `get_weather(location, day)` ツールを呼び、ツールが Open-Meteo から
 ライブ予報を取得してモデルに返し、モデルが自然な話し言葉（日本語/英語）で読み上げ用テキストを生成します。
 `mock` データ利用時のみ `demo_data: true` になります。
+
+### ツール実行中の「お待ちください」（無音回避）
+
+LLM のツール呼び出しには数秒の待ち時間が生じます。`invoke_handler` は応答を **SSE でストリーミング**するため、
+処理が `TOOL_WAIT_SECONDS`（既定 1.2 秒）以内に終わらない天気質問では、先に短いつなぎ言葉
+（日本語「少々お待ちください。」/ 英語 "One moment, please."）を `output_audio_transcription.delta` として送り、
+Voice Live がそれを即座に読み上げます。その後、本来の回答を続けて送るため、ユーザーが無音で待たされません。
+天気以外の即答（お断り）にはつなぎ言葉は付きません。`TOOL_WAIT_SECONDS=0` で無効化できます。
 
 ---
 
