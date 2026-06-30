@@ -126,7 +126,10 @@ python client/text_client.py --text "今日の東京の天気は？" --backend w
 | 変数名 | 必須 | デフォルト | 説明 |
 |--------|------|-----------|------|
 | `WEATHER_AGENT_NAME` | No | `weather-forecast-agent` | エージェントの表示名（情報のみ） |
-| `WEATHER_PROVIDER` | No | `mock` | `mock`（デモデータ）または `jma`（気象庁ライブデータ） |
+| `WEATHER_PROVIDER` | No | `mock` | `mock`（デモデータ）/ `live`（Open-Meteo ライブデータ）/ `jma`（スケルトン） |
+| `RESPONSE_MODE` | No | `template` | `template`（ルールベース）/ `llm`（モデル + get_weather ツール） |
+| `LLM_MODEL_DEPLOYMENT` | No | `gpt-4.1-mini` | `RESPONSE_MODE=llm` で使うチャットモデルのデプロイ名 |
+| `AZURE_AI_PROJECT_ENDPOINT` | No | なし | ローカルで LLM を使う際の Foundry プロジェクトエンドポイント（ホスト環境では `FOUNDRY_PROJECT_ENDPOINT` を自動注入） |
 | `WEATHER_AGENT_HOST` | No | `127.0.0.1` | ローカルサーバーホスト |
 | `WEATHER_AGENT_PORT` | No | `8080` | ローカルサーバーポート |
 
@@ -145,23 +148,39 @@ python client/text_client.py --text "今日の東京の天気は？" --backend w
 
 ---
 
-## デモデータ vs ライブ気象データ
+## デモデータ vs ライブ気象データ / LLM モード
 
-> **重要**: v1 はデフォルトで**デモ用のサンプルデータ**を使用します。実際の気象情報は提供しません。
+天気データの取得方法（`WEATHER_PROVIDER`）と、応答の生成方法（`RESPONSE_MODE`）は独立して設定できます。
 
-| モード | `WEATHER_PROVIDER` の値 | データの種類 | 追加設定 |
-|--------|------------------------|-------------|---------|
-| **デモ（デフォルト）** | `mock` | エージェントが生成したサンプル予報。東京・大阪・京都・札幌・福岡の5都市に対応。 | 不要 |
-| **ライブ（オプション）** | `jma` | 気象庁（JMA）API を使用した実際の気象データ。 | JMA API アクセスの設定が必要 |
+| `WEATHER_PROVIDER` | データの種類 | 追加設定 |
+|--------------------|-------------|---------|
+| `mock`（デフォルト） | 決め打ちのデモ予報。東京・大阪・京都・札幌・福岡の5都市に対応。`demo_data: true`。 | 不要（オフライン可） |
+| `live` | [Open-Meteo](https://open-meteo.com/) のライブ予報（無料・キー不要・全世界）。日本の主要都市は内蔵座標で解決し、その他は Open-Meteo ジオコーディングで解決。`demo_data: false`。 | ネットワーク接続 |
+| `jma` | 気象庁 API のスケルトン（未実装）。失敗時は `mock` にフォールバック。 | — |
 
-すべての `weather.response` メッセージには `"demo_data": true` フラグが含まれ、
-テキストクライアントでも画面に「このデータはデモ用のサンプルデータです」と表示されます。
+| `RESPONSE_MODE` | 応答の生成 |
+|-----------------|-----------|
+| `template`（デフォルト） | キーワード解析によるルールベース応答。オフライン・決定的でテスト向き。 |
+| `llm` | Foundry チャットモデル（Responses API）が `get_weather` ツール（function calling）を呼び出して動的に天気を取得し、ユーザーの言語で自然に応答。失敗時は `template` に自動フォールバック。 |
 
-ライブデータを有効にするには `.env` に以下を設定します:
+### 日本語 / 英語（バイリンガル）
+
+入力言語を自動判定し、同じ言語で応答します（**日本語優先**）。`template` / `llm` の両モードに対応し、
+天気予報・聞き返し・天気以外のお断りもすべて日本語/英語で出し分けます。
+
+### LLM + ツール構成の例（ライブ天気を動的に取得）
 
 ```env
-WEATHER_PROVIDER=jma
+RESPONSE_MODE=llm
+WEATHER_PROVIDER=live
+LLM_MODEL_DEPLOYMENT=gpt-4.1-mini
+# ローカル実行時のみ（ホストでは自動注入）
+AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
 ```
+
+この構成では、モデルが `get_weather(location, day)` ツールを呼び、ツールが Open-Meteo から
+ライブ予報を取得してモデルに返し、モデルが自然な話し言葉（日本語/英語）で読み上げ用テキストを生成します。
+`mock` データ利用時のみ `demo_data: true` になります。
 
 ---
 
@@ -224,7 +243,8 @@ hosted-agents/weather-forecast/
 │   ├── config.py             # 設定の読み込みと検証
 │   ├── protocol.py           # WebSocket メッセージ定義
 │   ├── session_state.py      # セッション状態管理（インメモリ）
-│   └── weather.py            # 天気プロバイダー（mock / jma）
+│   ├── weather.py            # 天気プロバイダー（mock / live[Open-Meteo] / jma）+ バイリンガル
+│   └── llm.py                # LLM 応答生成（Responses API + get_weather ツール）
 ├── client/
 │   └── text_client.py        # テキスト WebSocket 検証クライアント
 └── tests/
@@ -232,5 +252,6 @@ hosted-agents/weather-forecast/
     ├── test_protocol.py
     ├── test_session_state.py
     ├── test_weather.py
+    ├── test_llm_bilingual.py
     └── test_readme_contract.py
 ```

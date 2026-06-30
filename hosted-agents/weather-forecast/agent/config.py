@@ -16,7 +16,8 @@ except ImportError:
     pass  # python-dotenv is optional; env vars may be set externally
 
 
-VALID_WEATHER_PROVIDERS = frozenset({"mock", "jma"})
+VALID_WEATHER_PROVIDERS = frozenset({"mock", "live", "jma"})
+VALID_RESPONSE_MODES = frozenset({"template", "llm"})
 
 _FOUNDRY_REQUIRED = ("PROJECT_NAME", "AGENT_NAME", "AZURE_VOICELIVE_ENDPOINT")
 
@@ -25,9 +26,19 @@ _FOUNDRY_REQUIRED = ("PROJECT_NAME", "AGENT_NAME", "AZURE_VOICELIVE_ENDPOINT")
 class Settings:
     # --- Local sample ---
     agent_name: str = "weather-forecast-agent"
-    weather_provider: Literal["mock", "jma"] = "mock"
+    weather_provider: Literal["mock", "live", "jma"] = "mock"
     host: str = "127.0.0.1"
     port: int = 8080
+
+    # --- Response generation ---
+    # "template" = deterministic rule-based replies (default, offline-friendly).
+    # "llm"      = Foundry chat model + get_weather tool (see agent/llm.py).
+    response_mode: Literal["template", "llm"] = "template"
+    # Foundry project endpoint used by the LLM responder (Responses API).
+    # Auto-injected as FOUNDRY_PROJECT_ENDPOINT in hosted containers.
+    project_endpoint: str = ""
+    # Chat model deployment name for the LLM responder (not the voice model).
+    llm_model_deployment: str = "gpt-4.1-mini"
 
     # --- Foundry / Voice Live ---
     project_name: str = ""
@@ -55,6 +66,12 @@ class Settings:
                 f"WEATHER_PROVIDER must be one of {sorted(VALID_WEATHER_PROVIDERS)!r}, got {provider!r}"
             )
 
+        response_mode = os.environ.get("RESPONSE_MODE", "template").strip().lower()
+        if response_mode not in VALID_RESPONSE_MODES:
+            raise ValueError(
+                f"RESPONSE_MODE must be one of {sorted(VALID_RESPONSE_MODES)!r}, got {response_mode!r}"
+            )
+
         port_raw = os.environ.get("WEATHER_AGENT_PORT", "8080")
         try:
             port = int(port_raw)
@@ -70,6 +87,14 @@ class Settings:
         s = cls(
             agent_name=agent_name,
             weather_provider=provider,  # type: ignore[arg-type]
+            response_mode=response_mode,  # type: ignore[arg-type]
+            project_endpoint=(
+                os.environ.get("FOUNDRY_PROJECT_ENDPOINT")
+                or os.environ.get("AZURE_AI_PROJECT_ENDPOINT", "")
+            ),
+            llm_model_deployment=os.environ.get(
+                "LLM_MODEL_DEPLOYMENT", "gpt-4.1-mini"
+            ),
             host=os.environ.get("WEATHER_AGENT_HOST", "127.0.0.1"),
             port=port,
             project_name=os.environ.get("PROJECT_NAME", ""),

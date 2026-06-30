@@ -34,6 +34,7 @@ from .session_state import SessionStore, default_store
 from .weather import (
     ForecastResponse,
     WeatherRequest,
+    detect_language,
     get_forecast,
     is_weather_request,
     is_location_only_reply,
@@ -42,6 +43,26 @@ from .weather import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _redirect_text(language: str) -> str:
+    """Polite non-weather decline in the user's language (FR-007)."""
+    if language == "en":
+        return (
+            "Sorry, I can only help with weather forecasts. "
+            "Please feel free to ask about the weather."
+        )
+    return (
+        "申し訳ありませんが、天気予報に関するご質問のみお答えできます。"
+        "天気についてお気軽にお尋ねください。"
+    )
+
+
+def _clarify_text(language: str) -> str:
+    """Location clarification prompt in the user's language."""
+    if language == "en":
+        return "Which city's weather would you like to know?"
+    return "どの地域の天気を知りたいですか？"
 
 # Query parameter names that indicate a bearer token — reject them all.
 # Foundry validates auth before proxying; the container must not accept tokens.
@@ -64,6 +85,11 @@ def _has_auth_query_param(ws: WebSocket) -> bool:
 def create_app(settings: Settings | None = None, store: SessionStore | None = None) -> FastAPI:
     cfg = settings or Settings.from_env()
     sessions = store or default_store
+
+    # Optional LLM responder (RESPONSE_MODE=llm); None keeps template behavior.
+    from .llm import maybe_build_responder
+
+    responder = maybe_build_responder(cfg)
 
     # Startup: surface missing config
     missing_msg = cfg.report_missing_foundry()
@@ -135,7 +161,7 @@ def create_app(settings: Settings | None = None, store: SessionStore | None = No
                     # session_id to prevent mid-connection session hijacking.
 
                     response_json = await _handle_weather_request(
-                        req_msg.text, session, cfg.weather_provider
+                        req_msg.text, session, cfg.weather_provider, responder
                     )
                     await ws.send_text(response_json)
 
@@ -149,13 +175,15 @@ def create_app(settings: Settings | None = None, store: SessionStore | None = No
                             pending_text = session.pending_weather_text
                             session.clear_pending_request()
                             response_json = await _handle_weather_request(
-                                pending_text or location, session, cfg.weather_provider
+                                pending_text or location, session, cfg.weather_provider, responder
                             )
                             await ws.send_text(response_json)
                         else:
                             await ws.send_text(
                                 ClarificationMessage(
-                                    text="どの地域の天気を知りたいですか？"
+                                    text=_clarify_text(
+                                        detect_language(data.get("text", raw_text))
+                                    )
                                 ).to_json()
                             )
                     else:
@@ -169,7 +197,7 @@ def create_app(settings: Settings | None = None, store: SessionStore | None = No
                         pending = session.pending_weather_text
                         session.clear_pending_request()
                         response_json = await _handle_weather_request(
-                            pending or location, session, cfg.weather_provider
+                            pending or location, session, cfg.weather_provider, responder
                         )
                         await ws.send_text(response_json)
                     else:
@@ -191,9 +219,22 @@ def create_app(settings: Settings | None = None, store: SessionStore | None = No
 
 
 async def _handle_weather_request(
-    text: str, session: Any, provider: str
+    text: str, session: Any, provider: str, responder: Any = None
 ) -> str:
-    """Parse text into a weather request, update session state, return JSON response."""
+    """Parse text into a weather request, update session state, return JSON response.
+
+    When *responder* (an :class:`agent.llm.LLMResponder`) is provided, the LLM
+    path is tried first; on any failure it transparently falls back to the
+    deterministic template logic below.
+    """
+    if responder is not None:
+        llm_out = await responder.respond(text, session)
+        if llm_out is not None:
+            return llm_out
+        # Fall through to the template path on LLM failure.
+
+    language = detect_language(text)
+
     if session.pending_weather_text:
         mentioned_location = parse_location_reply(text)
         location = mentioned_location if is_location_only_reply(text) else None
@@ -201,19 +242,13 @@ async def _handle_weather_request(
             session.update_location(location)
             text = session.pending_weather_text
         elif mentioned_location and not is_weather_request(text):
-            return RedirectMessage(
-                text="申し訳ありませんが、天気予報に関するご質問のみお答えできます。"
-                     "天気についてお気軽にお尋ねください。"
-            ).to_json()
+            return RedirectMessage(text=_redirect_text(language)).to_json()
         elif not is_weather_request(text):
-            return ClarificationMessage(text="どの地域の天気を知りたいですか？").to_json()
+            return ClarificationMessage(text=_clarify_text(language)).to_json()
 
     # FR-007: politely decline non-weather requests before any location parsing.
     if not is_weather_request(text):
-        return RedirectMessage(
-            text="申し訳ありませんが、天気予報に関するご質問のみお答えできます。"
-                 "天気についてお気軽にお尋ねください。"
-        ).to_json()
+        return RedirectMessage(text=_redirect_text(language)).to_json()
 
     req = parse_weather_request(
         text,

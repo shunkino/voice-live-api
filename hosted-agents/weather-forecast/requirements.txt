@@ -7,9 +7,9 @@ aiohttp>=3.9.0
 # Foundry hosted-agent SDK — required for InvocationAgentServerHost.
 azure-ai-agentserver-invocations
 
-# Optional: Azure AI projects + identity for Foundry deployment.
-# azure-ai-projects>=2.0.0b3
-# azure-identity
+# Azure AI projects + identity — required for RESPONSE_MODE=llm (Responses API).
+azure-ai-projects>=2.0.0b3
+azure-identity
 
 # Optional: Voice Live integration patterns.
 # azure-ai-voicelive>=1.2.0b4

@@ -47,11 +47,15 @@ from .weather import (
     parse_weather_request,
 )
 from .app import _handle_weather_request  # reuse the shared logic
+from .llm import maybe_build_responder
 
 logger = logging.getLogger(__name__)
 
 cfg = Settings.from_env()
 sessions = default_store
+
+# Optional LLM responder (RESPONSE_MODE=llm); None keeps template behavior.
+responder = maybe_build_responder(cfg)
 
 missing = cfg.report_missing_foundry()
 if missing:
@@ -112,7 +116,7 @@ async def handle_invoke(request: Request):
     session = sessions.get_or_create(session_id)
 
     response_json = await _handle_weather_request(
-        user_text, session, cfg.weather_provider
+        user_text, session, cfg.weather_provider, responder
     )
     try:
         spoken = json.loads(response_json).get("text", "")
@@ -188,7 +192,7 @@ async def handle_ws(ws: WebSocket) -> None:
             if msg_type == "weather.request":
                 req_msg = WeatherRequestMessage.from_dict(data)
                 response_json = await _handle_weather_request(
-                    req_msg.text, session, cfg.weather_provider
+                    req_msg.text, session, cfg.weather_provider, responder
                 )
                 await ws.send_text(response_json)
 
@@ -200,7 +204,7 @@ async def handle_ws(ws: WebSocket) -> None:
                         pending_text = session.pending_weather_text
                         session.clear_pending_request()
                         response_json = await _handle_weather_request(
-                            pending_text or location, session, cfg.weather_provider
+                            pending_text or location, session, cfg.weather_provider, responder
                         )
                         await ws.send_text(response_json)
                     else:
@@ -217,7 +221,7 @@ async def handle_ws(ws: WebSocket) -> None:
                     pending = session.pending_weather_text
                     session.clear_pending_request()
                     response_json = await _handle_weather_request(
-                        pending or location, session, cfg.weather_provider
+                        pending or location, session, cfg.weather_provider, responder
                     )
                     await ws.send_text(response_json)
                 else:
