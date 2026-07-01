@@ -374,12 +374,61 @@ flowchart TD
 
 ---
 
-## 8. 補足: `invocations_ws`（生 WebSocket）との関係
+## 8. `invocations` と `invocations_ws` の違い（入力は音声？テキスト？）
 
-エージェントは `invocations_ws`（独自 JSON プロトコルの双方向 WebSocket）も公開していますが、
-**Voice Live はこちらを使いません**。`invocations_ws` はブラウザ等が独自実装で直接叩くための別パターンで、
-Voice Live 連携の本線は `invocations`（HTTP/SSE）＋ `voiceLiveCompatible` です。両者は同じコンテナ
-（`InvocationAgentServerHost`）で同時に提供できます（`agent/server.py` 参照）。
+エージェントは 2 つの入力エンドポイントを公開でき、混同しやすいので整理します。
+**本リポジトリの Voice Live 連携の本線は `invocations`（HTTP/SSE）** です。`invocations_ws` は
+別パターン（コンテナ自身が音声パイプラインを持つ場合など）で、Voice Live はこちらを使いません。
+
+### 8.1 早見表
+
+| | `invocations`（HTTP/SSE）＝ **Voice Live パス** | `invocations_ws`（WebSocket） |
+|---|---|---|
+| エージェントへの入力 | **テキストのみ** `{"type":"input_audio.transcription","input":"…"}`（STT は Voice Live 済み） | **テキスト and/or バイナリ**（プロトコルは自分で定義） |
+| 出力 | **テキスト SSE** `output_audio_transcription.delta/.done`（TTS は Voice Live が実施） | 送り返す内容は自由（テキスト/バイナリ） |
+| STT / TTS を持つのは | **Voice Live** | **あなたのコンテナ** |
+| 本リポジトリの天気エージェント | ✅ 本線（`voiceLiveCompatible`、`@app.invoke_handler`） | ✅ 併設。ただし独自 **JSON テキスト**プロトコル（`weather.request`/`weather.response`）。音声は処理しない |
+
+> §5.4 の `output_audio_transcription` は **`invocations`（Voice Live パス）**の出力です。この経路では
+> エージェントは常に**テキスト**だけを扱います（音声処理は Voice Live 側）。
+
+### 8.2 `invocations_ws` の入力は「音声」か「テキスト」か → **どちらも可**
+
+`invocations_ws` は **生の全二重 WebSocket** で、プラットフォームはフレームを**生バイトのまま素通し**します。
+ワイヤープロトコルは**利用者が定義**します。フレーム種別は次の 2 つを両方サポートします。
+
+| フレーム種別 | 主な用途 |
+|---|---|
+| テキスト（UTF-8） | JSON 制御メッセージ |
+| バイナリ | 音声（PCM/Opus）、画像、その他非テキストのペイロード |
+
+つまり「音声か、テキストか」ではなく、**制御（テキスト/JSON）とメディア（バイナリ）を 1 本の持続接続で
+自由に混在**させられる、という位置づけです。本リポジトリの実装（`agent/server.py: handle_ws`）は
+テキスト経路のデモで、バイナリフレームは受信してもサイズ検査だけして無視します（音声パイプラインは未実装）。
+
+```python
+message = await ws.receive()
+if "bytes" in message:          # バイナリフレーム（例: 音声）
+    ...  # 本デモではサイズ検査のみで無視
+raw_text = message.get("text")  # テキストフレーム（独自 JSON: weather.request）
+```
+
+### 8.3 `invocations_ws` のユースケース
+
+**1 本の持続接続での双方向ストリーミング**が必要で、**コンテナ自身がパイプラインを持つ**ケースに向きます。
+
+- **コンテナ内で STT→LLM→TTS を完結させるリアルタイム音声**（Pipecat / LiveKit / コンテナ内の Voice Live SDK）。
+  ブラウザがマイク PCM を**バイナリで入力**し、コンテナが合成音声を**バイナリで出力**します。
+- **WebRTC シグナリング**チャネル（SDP/ICE をテキストフレームで、メディアは WebRTC 側）。
+- **電話連携（テレフォニー）ブリッジ**（例: Twilio の通話音声ストリーム）。
+- **独自ストリーミングプロトコル**（AG-UI など、OpenAI 非互換のもの）。
+
+### 8.4 使い分けの結論
+
+- **Voice Live に STT/TTS を任せ、エージェントはテキストだけ扱いたい** → `invocations`（本リポジトリの本線）。
+- **コンテナ自身が音声（バイナリ）を直接扱い、双方向ストリーミングを制御したい** → `invocations_ws`。
+
+両者は同じコンテナ（`InvocationAgentServerHost`）で**同時に提供**できます（`agent/server.py` 参照）。
 
 ---
 
@@ -388,6 +437,7 @@ Voice Live 連携の本線は `invocations`（HTTP/SSE）＋ `voiceLiveCompatibl
 - ホスト型エージェント全体: <https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agents>
 - デプロイ手順: <https://learn.microsoft.com/azure/foundry/agents/how-to/deploy-hosted-agent>
 - Voice Live × ホスト型エージェント: <https://learn.microsoft.com/azure/ai-services/speech-service/how-to-voice-live-hosted-agent-integration>
+- `invocations_ws` で音声エージェントを作る（フレーム仕様の一次情報）: <https://learn.microsoft.com/azure/foundry/agents/how-to/build-voice-agent>
 - サンプル（invocations + Voice Live）: <https://github.com/microsoft-foundry/foundry-samples/tree/main/samples/python/hosted-agents/bring-your-own/voicelive/hello-world-invocations-voicelive>
 - Open-Meteo（ライブ天気データ・無料/キー不要）: <https://open-meteo.com/>
 - 本リポジトリ:
