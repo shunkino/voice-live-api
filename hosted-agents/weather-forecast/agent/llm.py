@@ -36,12 +36,18 @@ _SYSTEM_PROMPT = (
     "あなたは親切な天気予報アシスタントです。"
     "ユーザーと同じ言語で、簡潔で自然な話し言葉で応答してください（日本語を優先）。"
     "天気に関する質問には必ず get_weather ツールを使って予報を取得し、その結果だけに基づいて答えてください。"
+    "ツール結果には最高気温(temperature_max_c)・最低気温(temperature_min_c)・現在の気温(temperature_current_c、今日のみ)・"
+    "降水確率(precipitation_chance)が含まれます。ユーザーの質問に合う情報を選んで自然に伝えてください"
+    "（例:「今何度?」には現在の気温）。値が無い(null)項目は述べないでください。"
     "地名が不明な場合は、どの地域か一度だけ聞き返してください。"
     "天気以外の質問には丁寧にお断りし、天気についてお尋ねくださいと促してください。"
     "音声で読み上げられるため、1〜2文の短い文章にし、箇条書きや記号は使わないでください。\n\n"
     "You are a helpful weather assistant. Reply in the user's language "
     "(prefer Japanese), concise and natural for speech. For weather questions, "
-    "always call the get_weather tool and answer only from its result. If the "
+    "always call the get_weather tool and answer only from its result. The result "
+    "includes temperature_max_c, temperature_min_c, temperature_current_c (today "
+    "only), and precipitation_chance — pick what fits the question (e.g. 'what's it "
+    "now?' -> current temperature) and don't mention null fields. If the "
     "location is unknown, ask once which city. Politely decline non-weather "
     "questions and invite a weather question instead. Keep replies to 1-2 short "
     "spoken sentences with no lists or markup."
@@ -140,7 +146,9 @@ class LLMResponder:
             "location": forecast.location,
             "day": forecast.day,
             "summary": forecast.summary,
-            "temperature_c": forecast.temperature_c,
+            "temperature_max_c": forecast.temperature_c,
+            "temperature_min_c": forecast.temperature_min_c,
+            "temperature_current_c": forecast.temperature_current_c,
             "precipitation_chance": forecast.precipitation_chance,
             "is_demo_data": forecast.is_demo_data,
             "source": forecast.source,
@@ -214,11 +222,15 @@ class LLMResponder:
                     last_day = result.get("day") or last_day
                     last_demo = bool(result.get("is_demo_data", last_demo))
                     logger.info(
-                        "get_weather tool: location=%s day=%s -> source=%s temp=%s",
+                        "get_weather tool: location=%s day=%s -> source=%s "
+                        "max=%s min=%s current=%s precip=%s",
                         result.get("location"),
                         result.get("day"),
                         result.get("source"),
-                        result.get("temperature_c"),
+                        result.get("temperature_max_c"),
+                        result.get("temperature_min_c"),
+                        result.get("temperature_current_c"),
+                        result.get("precipitation_chance"),
                     )
 
                     input_items.append(

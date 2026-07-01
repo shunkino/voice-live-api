@@ -67,6 +67,23 @@ class TestBilingualOutput:
         assert text.startswith("The weather in Tokyo today is")
         assert "°C" in text
 
+    def test_mock_includes_min_and_current_for_today(self):
+        f = get_mock_forecast(WeatherRequest(location="東京", day="今日", language="ja"))
+        assert f.temperature_c is not None
+        assert f.temperature_min_c is not None and f.temperature_min_c < f.temperature_c
+        # Current temperature is only provided for "today".
+        assert f.temperature_current_c is not None
+
+    def test_mock_no_current_for_future_day(self):
+        f = get_mock_forecast(WeatherRequest(location="東京", day="明日", language="ja"))
+        assert f.temperature_current_c is None
+        assert f.temperature_min_c is not None
+
+    def test_spoken_text_includes_min_and_current(self):
+        f = get_mock_forecast(WeatherRequest(location="東京", day="今日", language="ja"))
+        text = f.to_spoken_text()
+        assert "最低気温" in text and "現在の気温" in text
+
     def test_english_clarification_prompt(self):
         req = parse_weather_request("what's the weather?")
         assert req.needs_clarification is True

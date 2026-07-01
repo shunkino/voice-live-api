@@ -201,30 +201,39 @@ class ForecastResponse:
     location: str
     day: str
     summary: str
-    temperature_c: Optional[int] = None
+    temperature_c: Optional[int] = None  # daily maximum temperature
     precipitation_chance: Optional[int] = None
     is_demo_data: bool = True
     source: str = "demo"
     language: str = "ja"
+    temperature_min_c: Optional[int] = None  # daily minimum temperature
+    temperature_current_c: Optional[int] = None  # current temperature (today only)
 
     def to_spoken_text(self) -> str:
         """Return a natural sentence (Japanese or English) for voice output."""
         if self.language == "en":
-            temp_part = (
-                f" The high will be around {self.temperature_c}°C."
-                if self.temperature_c is not None
-                else ""
+            parts = [f"The weather in {self.location} {self.day} is {self.summary}."]
+            if self.temperature_current_c is not None:
+                parts.append(f" It's currently around {self.temperature_current_c}°C.")
+            if self.temperature_c is not None and self.temperature_min_c is not None:
+                parts.append(
+                    f" The high will be around {self.temperature_c}°C and the low"
+                    f" around {self.temperature_min_c}°C."
+                )
+            elif self.temperature_c is not None:
+                parts.append(f" The high will be around {self.temperature_c}°C.")
+            return "".join(parts)
+
+        parts = [f"{self.location}の{self.day}の天気は{self.summary}です。"]
+        if self.temperature_current_c is not None:
+            parts.append(f"現在の気温は{self.temperature_current_c}度です。")
+        if self.temperature_c is not None and self.temperature_min_c is not None:
+            parts.append(
+                f"最高気温は{self.temperature_c}度、最低気温は{self.temperature_min_c}度の見込みです。"
             )
-            return (
-                f"The weather in {self.location} {self.day} is {self.summary}."
-                f"{temp_part}"
-            )
-        temp_part = (
-            f"最高気温は{self.temperature_c}度前後の見込みです。"
-            if self.temperature_c is not None
-            else ""
-        )
-        return f"{self.location}の{self.day}の天気は{self.summary}です。{temp_part}"
+        elif self.temperature_c is not None:
+            parts.append(f"最高気温は{self.temperature_c}度前後の見込みです。")
+        return "".join(parts)
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────
@@ -527,7 +536,8 @@ async def get_live_forecast(
         params = {
             "latitude": lat,
             "longitude": lon,
-            "daily": "weather_code,temperature_2m_max,precipitation_probability_max",
+            "current": "temperature_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
             "timezone": "auto",
             "forecast_days": 7,
         }
@@ -536,6 +546,7 @@ async def get_live_forecast(
         daily = (data or {}).get("daily") or {}
         codes = daily.get("weather_code") or []
         temps = daily.get("temperature_2m_max") or []
+        temps_min = daily.get("temperature_2m_min") or []
         precips = daily.get("precipitation_probability_max") or []
         idx = min(_day_index(request.day), len(codes) - 1) if codes else 0
         if not codes:
@@ -543,9 +554,21 @@ async def get_live_forecast(
 
         summary = _wmo_summary(codes[idx], request.language)
         temp = round(temps[idx]) if idx < len(temps) and temps[idx] is not None else None
+        temp_min = (
+            round(temps_min[idx])
+            if idx < len(temps_min) and temps_min[idx] is not None
+            else None
+        )
         precip = (
             int(precips[idx])
             if idx < len(precips) and precips[idx] is not None
+            else None
+        )
+        # Current temperature is only meaningful for "today" (idx == 0).
+        current = (data or {}).get("current") or {}
+        current_temp = (
+            round(current["temperature_2m"])
+            if idx == 0 and current.get("temperature_2m") is not None
             else None
         )
         day_display = (
@@ -558,6 +581,8 @@ async def get_live_forecast(
             day=day_display,
             summary=summary,
             temperature_c=temp,
+            temperature_min_c=temp_min,
+            temperature_current_c=current_temp,
             precipitation_chance=precip,
             is_demo_data=False,
             source="open-meteo",
@@ -586,11 +611,20 @@ def get_mock_forecast(request: WeatherRequest) -> ForecastResponse:
         day = request.day
         summary = day_data["summary"]
 
+    temp_max = day_data.get("temp_c")
+    # Derive plausible demo min/current so mock stays consistent with live shape.
+    temp_min = temp_max - 5 if temp_max is not None else None
+    temp_current = (
+        temp_max - 2 if (temp_max is not None and request.day == "今日") else None
+    )
+
     return ForecastResponse(
         location=location,
         day=day,
         summary=summary,
-        temperature_c=day_data.get("temp_c"),
+        temperature_c=temp_max,
+        temperature_min_c=temp_min,
+        temperature_current_c=temp_current,
         precipitation_chance=day_data.get("precip"),
         is_demo_data=True,
         source="demo",
