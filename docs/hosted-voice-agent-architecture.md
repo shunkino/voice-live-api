@@ -69,6 +69,35 @@ Hosted Agent API がどう連携し、Foundry プレイグラウンドや本リ�
                         └─────────────────────────────────────────────────┘
 ```
 
+同じ構成を Mermaid で表すと次のとおりです（内容は上の ASCII 図と同じ）:
+
+```mermaid
+flowchart TB
+    subgraph Clients["クライアント（いずれも Voice Live クライアント）"]
+        A["(A) Foundry プレイグラウンド<br/>ブラウザ（MS ホスト）"]
+        B["(B) 本リポジトリ Web UI / CLI<br/>ブラウザ ⇄ FastAPI(server.py)<br/>PCM16/24k・Azure 認証を保持"]
+    end
+
+    subgraph VoiceLive["Azure Voice Live API<br/>&lt;account&gt;.services.ai.azure.com/voice-live/realtime"]
+        STT["STT（文字起こしモデル）"]
+        ORCH["会話オーケストレーション<br/>・VAD でターン区切り<br/>・エージェントへ転送"]
+        TTS["TTS（Azure Speech ボイス）"]
+        STT --> ORCH --> TTS
+    end
+
+    subgraph Agent["Foundry ホスト型エージェント（コンテナ）<br/>agent/server.py @app.invoke_handler"]
+        GEN["応答生成<br/>template=ルールベース<br/>llm=Foundry モデル + get_weather ツール"]
+        PROV["WEATHER_PROVIDER<br/>live=Open-Meteo（動的）<br/>mock=デモ（フォールバック）"]
+        GEN -->|tool 実行| PROV
+    end
+
+    A -->|"wss …/voice-live/realtime?agent-name=…&amp;agent-project-name=…<br/>Authorization: Bearer &lt;Entra token&gt;"| VoiceLive
+    B -->|"wss …/voice-live/realtime（同上）"| VoiceLive
+    Clients -.->|"session.update()<br/>voice / STT / VAD を指定"| VoiceLive
+    ORCH -->|"POST /invocations（transcription）"| Agent
+    Agent -->|"output_audio_transcription.delta/.done（SSE）"| TTS
+```
+
 ポイント: **エージェントは Voice Live の「下流」にいる**。クライアントはエージェントの
 `invocations_ws` エンドポイントへ直接つなぐのではなく、**Voice Live につなぐ**。Voice Live が
 音声をテキスト化し、エージェントの `invocations`（HTTP/SSE）を呼び、返ってきたテキストを音声合成します。
@@ -136,6 +165,23 @@ wss://<account>.services.ai.azure.com/voice-live/realtime
    │                                   │ ③ session.update(build_session(cfg))  ← 音声/STT/VAD を指定
    │  ④ サーバ→ブラウザ: session_ready / transcript_delta / audio_delta …
    ◀───────────────────────────────────┘
+```
+
+Mermaid（シーケンス）版:
+
+```mermaid
+sequenceDiagram
+    participant BR as ブラウザ
+    participant WS as FastAPI /ws<br/>(VoiceLiveBridge)
+    participant VL as Azure Voice Live
+    participant AG as ホスト型エージェント
+    BR->>WS: ① input_audio（PCM16/24k, base64）
+    WS->>VL: ② connect(endpoint, agent_name, project_name)
+    WS->>VL: ③ session.update(build_session)（voice/STT/VAD）
+    VL->>AG: POST /invocations（transcription）
+    AG-->>VL: output_audio_transcription（SSE）
+    VL-->>WS: session_ready / transcript / audio delta
+    WS-->>BR: ④ session_ready / transcript_delta / audio_delta
 ```
 
 - ブラウザは音声 I/O だけを担当（Azure 資格情報は持たない）。
@@ -242,6 +288,28 @@ Foundry チャットモデル（Responses API, LLM_MODEL_DEPLOYMENT）
                     output_audio_transcription.delta/.done（Voice Live が音声合成）
 ```
 
+Mermaid（フローチャート）版:
+
+```mermaid
+flowchart TD
+    IN["文字起こしテキスト"] --> MODEL["Foundry チャットモデル（Responses API）<br/>tools=[get_weather]<br/>tool_choice=天気質問なら get_weather を強制"]
+    MODEL -->|"function_call?"| DEC{ツール呼び出し?}
+    DEC -->|Yes| TOOL["get_weather(location, day)"]
+    TOOL --> PROV{WEATHER_PROVIDER}
+    PROV -->|live| OM["Open-Meteo（無料・キー不要）<br/>current + daily max/min/precip<br/>日本主要都市=内蔵座標 / その他=ジオコーディング<br/>WMO コード→日本語/英語"]
+    PROV -->|mock / 失敗時| MOCK["デモデータ（フォールバック, source=demo）"]
+    OM --> RESULT["ツール結果 JSON をモデルへ返す（ループ）"]
+    MOCK --> RESULT
+    RESULT --> MODEL
+    DEC -->|No| FINAL["最終テキスト"]
+    FINAL --> SSE["output_audio_transcription.delta/.done<br/>（Voice Live が音声合成）"]
+```
+
+> **ツール結果のフィールド**: `summary`（WMO→天気）, `temperature_max_c` / `temperature_min_c`（日別最高/最低）,
+> `temperature_current_c`（今日のみの現在気温）, `precipitation_chance`, `source`（`open-meteo`/`demo`）。
+> モデルは質問に合うフィールドを選び（例:「今何度?」→現在気温）、`null` の項目は述べません。
+> Open-Meteo へのリクエスト例: `…/v1/forecast?…&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=7`
+
 - **バイリンガル（日本語優先）**: 入力言語を自動判定（`detect_language`）し、同じ言語で応答。
   天気予報・聞き返し・天気以外のお断りを日本語/英語で出し分け。`template` モードも同様にバイリンガル。
 - **グラウンディングの保証**: 天気質問では `tool_choice` で `get_weather` の呼び出しを**強制**するため、
@@ -250,6 +318,10 @@ Foundry チャットモデル（Responses API, LLM_MODEL_DEPLOYMENT）
   （`GET /v1/forecast` 等、aiohttp 計装）に記録され、グラウンディングが可観測です。
 - **フォールバック**: 設定不足・モデル/ツール失敗時は `respond()` が `None` を返し、
   決定的な `template`＋`mock` パスへ自動的に切り替わります（音声対話が止まらない）。
+- **ライブ取得の信頼性**: Open-Meteo へは**プロセス常駐の warm な aiohttp セッション**（接続プール +
+  keep-alive + DNS キャッシュ）で接続し、リクエストごとに新規セッションを張りません。加えて 2 回リトライと
+  分割タイムアウト（total 8s / connect 3s / read 6s）を行い、一時的な遅延で `mock` に落ちないようにしています
+  （`agent/weather.py: _get_http_session` / `_get_json`）。
 - **フォローアップ**: 直近の location/day を `session_state` に保持し、instructions の文脈として渡すため、
   「明日は？」のように地名を省いた追質問にも対応（音声トランスクリプトは保存しません）。
 - **待ち時間の無音回避**: ツール呼び出しには数秒かかります。`invoke_handler` は応答を SSE でストリーミングし、
