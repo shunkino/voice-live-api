@@ -406,6 +406,61 @@ _WMO_SUMMARY: dict[int, tuple[str, str]] = {
 _OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 _OPEN_METEO_GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
+# Process-wide HTTP session (connection pooling + keep-alive + DNS cache). Creating
+# a fresh aiohttp.ClientSession per call pays a new DNS + TLS handshake every time,
+# which intermittently exceeded the timeout from the hosted container and caused
+# silent mock fallbacks. A reused, warm session makes calls fast and reliable.
+_http_session = None
+_http_session_loop = None
+
+# Split timeouts (seconds). Kept modest for voice UX — the "please wait" filler
+# covers the wait — but a slow connect fails fast so the retry can recover.
+_HTTP_TOTAL_TIMEOUT = 8.0
+_HTTP_CONNECT_TIMEOUT = 3.0
+_HTTP_READ_TIMEOUT = 6.0
+_HTTP_ATTEMPTS = 2
+
+
+def _get_http_session():
+    """Return a process-wide aiohttp session bound to the running event loop."""
+    global _http_session, _http_session_loop
+    import asyncio  # noqa: PLC0415
+    import aiohttp  # noqa: PLC0415
+
+    loop = asyncio.get_running_loop()
+    if _http_session is None or _http_session.closed or _http_session_loop is not loop:
+        timeout = aiohttp.ClientTimeout(
+            total=_HTTP_TOTAL_TIMEOUT,
+            connect=_HTTP_CONNECT_TIMEOUT,
+            sock_read=_HTTP_READ_TIMEOUT,
+        )
+        connector = aiohttp.TCPConnector(
+            limit=10, ttl_dns_cache=300, enable_cleanup_closed=True
+        )
+        _http_session = aiohttp.ClientSession(timeout=timeout, connector=connector)
+        _http_session_loop = loop
+    return _http_session
+
+
+async def _get_json(url: str, params: dict, attempts: int = _HTTP_ATTEMPTS):
+    """GET JSON via the shared session with a small retry for transient failures."""
+    session = _get_http_session()
+    last_exc: Optional[Exception] = None
+    for attempt in range(attempts):
+        try:
+            async with session.get(url, params=params) as resp:
+                resp.raise_for_status()
+                return await resp.json()
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.info(
+                "Open-Meteo request failed (attempt %d/%d) %s: %s",
+                attempt + 1, attempts, url, exc,
+            )
+    if last_exc is not None:
+        raise last_exc
+    return None
+
 
 def _wmo_summary(code: Optional[int], language: str) -> str:
     ja, en = _WMO_SUMMARY.get(int(code) if code is not None else -1, ("くもり", "cloudy"))
@@ -430,7 +485,7 @@ def _day_index(day: str) -> int:
 
 
 async def _resolve_coords(
-    location: str, language: str, timeout: float
+    location: str, language: str
 ) -> Optional[tuple[float, float, str]]:
     """Resolve a location to (lat, lon, display_name).
 
@@ -441,18 +496,9 @@ async def _resolve_coords(
         lat, lon, en_name = _JP_CITY_COORDS[location]
         return (lat, lon, en_name if language == "en" else location)
 
-    import aiohttp  # noqa: PLC0415
-
     params = {"name": location, "count": 1, "language": "en" if language == "en" else "ja"}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            _OPEN_METEO_GEOCODE_URL,
-            params=params,
-            timeout=aiohttp.ClientTimeout(total=timeout),
-        ) as resp:
-            resp.raise_for_status()
-            data = await resp.json()
-    results = data.get("results") or []
+    data = await _get_json(_OPEN_METEO_GEOCODE_URL, params)
+    results = (data or {}).get("results") or []
     if not results:
         return None
     top = results[0]
@@ -460,19 +506,20 @@ async def _resolve_coords(
 
 
 async def get_live_forecast(
-    request: WeatherRequest, timeout: float = 6.0
+    request: WeatherRequest, timeout: float = _HTTP_TOTAL_TIMEOUT
 ) -> Optional[ForecastResponse]:
     """Fetch a live forecast from Open-Meteo. Returns ``None`` on any failure.
 
     Open-Meteo is free and keyless. Japanese cities are resolved via a curated
-    coordinate table; other names use Open-Meteo geocoding.
+    coordinate table; other names use Open-Meteo geocoding. Uses a shared, warm
+    HTTP session with a small retry so transient slowness doesn't fall back to
+    mock data. (*timeout* is accepted for backwards compatibility; the shared
+    session's timeouts apply.)
     """
     if not request.location:
         return None
     try:
-        import aiohttp  # noqa: PLC0415
-
-        coords = await _resolve_coords(request.location, request.language, timeout)
+        coords = await _resolve_coords(request.location, request.language)
         if coords is None:
             return None
         lat, lon, display_name = coords
@@ -484,16 +531,9 @@ async def get_live_forecast(
             "timezone": "auto",
             "forecast_days": 7,
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                _OPEN_METEO_FORECAST_URL,
-                params=params,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
+        data = await _get_json(_OPEN_METEO_FORECAST_URL, params)
 
-        daily = data.get("daily") or {}
+        daily = (data or {}).get("daily") or {}
         codes = daily.get("weather_code") or []
         temps = daily.get("temperature_2m_max") or []
         precips = daily.get("precipitation_probability_max") or []
