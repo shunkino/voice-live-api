@@ -42,6 +42,11 @@ class Settings:
     # Seconds to wait before speaking a short "please wait" filler while a slow
     # turn (e.g. an LLM tool call) is still running. <= 0 disables the filler.
     tool_wait_seconds: float = 1.2
+    # When True, the LLM is instructed to write Japanese replies entirely in
+    # hiragana so the TTS engine reads them consistently (kanji readings are
+    # ambiguous and often mispronounced). English replies are unaffected. Only
+    # applies to RESPONSE_MODE=llm; the template path is unchanged.
+    hiragana_output: bool = True
 
     # --- Foundry / Voice Live ---
     project_name: str = ""
@@ -99,6 +104,7 @@ class Settings:
                 "LLM_MODEL_DEPLOYMENT", "gpt-4.1-mini"
             ),
             tool_wait_seconds=_parse_float_env("TOOL_WAIT_SECONDS", 1.2),
+            hiragana_output=_parse_bool_env("HIRAGANA_OUTPUT", True),
             host=os.environ.get("WEATHER_AGENT_HOST", "127.0.0.1"),
             port=port,
             project_name=os.environ.get("PROJECT_NAME", ""),
@@ -162,3 +168,11 @@ def _parse_float_env(name: str, default: float) -> float:
         return float(raw)
     except ValueError:
         return default
+
+
+def _parse_bool_env(name: str, default: bool) -> bool:
+    """Parse a boolean environment variable (true/1/yes/on), else *default*."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")

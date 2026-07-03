@@ -278,3 +278,51 @@ class TestLLMResponder:
         responder = _responder_with(fake, provider="mock")
         asyncio.run(responder.respond("おすすめのレストランは？", SessionStore().get_or_create("f2")))
         assert fake.calls[0]["tool_choice"] == "auto"
+
+
+# ── Hiragana output directive ─────────────────────────────────────────────────
+
+
+class TestHiraganaOutput:
+    def _instructions_for(self, text, hiragana_output):
+        fake = _FakeResponses([
+            _FakeResponse(output=[_FakeTextItem()], output_text="ok"),
+        ])
+        r = LLMResponder(
+            project_endpoint="https://x/api/projects/p",
+            model_deployment="gpt-4.1-mini",
+            provider="mock",
+            hiragana_output=hiragana_output,
+        )
+        r._responses = fake
+        asyncio.run(r.respond(text, SessionStore().get_or_create("h")))
+        return fake.calls[0]["instructions"]
+
+    def test_japanese_turn_gets_hiragana_directive(self):
+        instructions = self._instructions_for("おすすめのレストランは？", hiragana_output=True)
+        assert "ひらがな" in instructions
+
+    def test_english_turn_has_no_hiragana_directive(self):
+        instructions = self._instructions_for("any good restaurants?", hiragana_output=True)
+        assert "ひらがな" not in instructions
+
+    def test_directive_absent_when_disabled(self):
+        instructions = self._instructions_for("おすすめのレストランは？", hiragana_output=False)
+        assert "ひらがな" not in instructions
+
+    def test_config_default_is_enabled(self):
+        assert Settings().hiragana_output is True
+
+    def test_from_env_disables_hiragana(self, monkeypatch):
+        monkeypatch.setenv("HIRAGANA_OUTPUT", "false")
+        assert Settings.from_env().hiragana_output is False
+
+    def test_maybe_build_responder_threads_flag(self):
+        r = maybe_build_responder(
+            Settings(
+                response_mode="llm",
+                project_endpoint="https://x/api/projects/p",
+                hiragana_output=False,
+            )
+        )
+        assert r is not None and r._hiragana_output is False

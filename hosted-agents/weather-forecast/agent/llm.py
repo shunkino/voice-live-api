@@ -53,6 +53,17 @@ _SYSTEM_PROMPT = (
     "spoken sentences with no lists or markup."
 )
 
+# Appended to the instructions for Japanese turns when hiragana_output is on.
+# The TTS engine mispronounces kanji because their readings are context-
+# dependent; forcing hiragana makes the reading unambiguous.
+_HIRAGANA_DIRECTIVE = (
+    "\n\n【重要・日本語の表記ルール】日本語で答えるときは、返答の文をすべてひらがなで"
+    "書いてください。漢字やカタカナは使わないでください。これは音声読み上げ（TTS）が"
+    "漢字の読みをまちがえるのを防ぐためです。たとえば「東京の天気は晴れです」ではなく"
+    "「とうきょうのてんきははれです」と書きます。気温などの数字は算用数字のままで"
+    "かまいません（例:「25ど」）。"
+)
+
 _GET_WEATHER_TOOL: dict[str, Any] = {
     "type": "function",
     "name": "get_weather",
@@ -88,10 +99,12 @@ class LLMResponder:
         project_endpoint: str,
         model_deployment: str,
         provider: str = "live",
+        hiragana_output: bool = True,
     ) -> None:
         self._endpoint = project_endpoint
         self._model = model_deployment
         self._provider = provider
+        self._hiragana_output = hiragana_output
         self._responses = None  # lazily created OpenAI Responses client
 
     def _get_responses_client(self):
@@ -122,7 +135,12 @@ class LLMResponder:
             f"\n\nThe user's latest message is in {'Japanese' if language == 'ja' else 'English'}; "
             "respond in that language."
         )
-        return _SYSTEM_PROMPT + context + lang_hint
+        hiragana = (
+            _HIRAGANA_DIRECTIVE
+            if language == "ja" and self._hiragana_output
+            else ""
+        )
+        return _SYSTEM_PROMPT + context + lang_hint + hiragana
 
     async def _run_get_weather(
         self, args: dict[str, Any], language: str, session: Any
@@ -275,4 +293,5 @@ def maybe_build_responder(cfg: Any) -> Optional["LLMResponder"]:
         project_endpoint=endpoint,
         model_deployment=getattr(cfg, "llm_model_deployment", "gpt-4.1-mini"),
         provider=getattr(cfg, "weather_provider", "live"),
+        hiragana_output=getattr(cfg, "hiragana_output", True),
     )

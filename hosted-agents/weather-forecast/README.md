@@ -130,6 +130,7 @@ python client/text_client.py --text "今日の東京の天気は？" --backend w
 | `RESPONSE_MODE` | No | `template` | `template`（ルールベース）/ `llm`（モデル + get_weather ツール） |
 | `LLM_MODEL_DEPLOYMENT` | No | `gpt-4.1-mini` | `RESPONSE_MODE=llm` で使うチャットモデルのデプロイ名 |
 | `TOOL_WAIT_SECONDS` | No | `1.2` | ツール実行などで応答が遅いとき「少々お待ちください」と先に話すまでの秒数（`0` 以下で無効） |
+| `HIRAGANA_OUTPUT` | No | `true` | `RESPONSE_MODE=llm` で日本語応答をすべてひらがなで生成させる（漢字の読み間違いを防ぐ）。`false` で通常表記に戻す |
 | `AZURE_AI_PROJECT_ENDPOINT` | No | なし | ローカルで LLM を使う際の Foundry プロジェクトエンドポイント（ホスト環境では `FOUNDRY_PROJECT_ENDPOINT` を自動注入） |
 | `WEATHER_AGENT_HOST` | No | `127.0.0.1` | ローカルサーバーホスト |
 | `WEATHER_AGENT_PORT` | No | `8080` | ローカルサーバーポート |
